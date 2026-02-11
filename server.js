@@ -1739,6 +1739,87 @@ app.get('/api/inventory', verifyToken, async (req, res) => {
     }
 });
 
+// GET inventory item by name (flexible matching) - searches both raw ingredients and menu items
+app.get('/api/inventory/name/:itemName', verifyToken, async (req, res) => {
+    try {
+        const itemName = decodeURIComponent(req.params.itemName);
+        console.log(`🔍 API: Looking up inventory by name: "${itemName}"`);
+        
+        let item = null;
+        let fromCollection = null;
+        
+        // Try exact match first in InventoryItem (case-insensitive)
+        let inventoryItem = await InventoryItem.findOne({
+            $expr: {
+                $eq: [{ $toLower: '$itemName' }, itemName.toLowerCase().trim()]
+            }
+        }).lean();
+        
+        if (inventoryItem) {
+            item = inventoryItem;
+            fromCollection = 'InventoryItem (raw ingredient)';
+        } else {
+            // If not found in InventoryItem, try MenuItem (finished products)
+            console.log(`   ℹ️  Not found in raw ingredients, searching menu items...`);
+            let menuItem = await MenuItem.findOne({
+                $expr: {
+                    $eq: [{ $toLower: '$itemName' }, itemName.toLowerCase().trim()]
+                }
+            }).lean();
+            
+            if (!menuItem) {
+                // Try alternate field 'name' in MenuItem
+                menuItem = await MenuItem.findOne({
+                    $expr: {
+                        $eq: [{ $toLower: '$name' }, itemName.toLowerCase().trim()]
+                    }
+                }).lean();
+            }
+            
+            if (menuItem) {
+                item = menuItem;
+                fromCollection = 'MenuItem (finished product)';
+            }
+        }
+        
+        if (!item) {
+            console.warn(`⚠️ No item found for: "${itemName}" in any collection`);
+            return res.status(404).json({
+                success: false,
+                message: `Item "${itemName}" not found in inventory or menu`
+            });
+        }
+        
+        const formatted = {
+            _id: item._id,
+            itemId: item._id.toString(),
+            itemName: item.itemName || item.name,
+            category: item.category,
+            currentStock: item.currentStock || 0,
+            minStock: item.minStock || 0,
+            maxStock: item.maxStock || 0,
+            unit: item.unit,
+            status: item.currentStock === 0 ? 'out_of_stock' : item.currentStock <= item.minStock ? 'low_stock' : 'in_stock',
+            itemType: item.itemType || 'finished',
+            lastUpdated: item.updatedAt || item.createdAt,
+            source: fromCollection
+        };
+        
+        console.log(`✅ Found item: "${formatted.itemName}" from ${fromCollection}`);
+        res.json({
+            success: true,
+            data: formatted
+        });
+    } catch (error) {
+        console.error('❌ Error fetching item by name:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error fetching item by name',
+            error: error.message
+        });
+    }
+});
+
 // GET single inventory item
 app.get('/api/inventory/:itemId', verifyToken, async (req, res) => {
     try {

@@ -3216,15 +3216,249 @@ function saveAllChanges() {
 }
 
 // Send stock batch
-function sendStockBatch() {
-    alert('Send stock batch functionality');
+// ==================== HELPER FUNCTION: Find Inventory Item with Flexible Matching ====================
+async function findInventoryItem(itemName) {
+    try {
+        // Step 1: Try exact name match first (searches both InventoryItem and MenuItem collections)
+        console.log(`🔍 Level 1: Trying exact name match for "${itemName}"...`);
+        let inventoryResponse = await fetch(`${BACKEND_URL}/api/inventory/name/${encodeURIComponent(itemName)}`, {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include'
+        });
+        
+        if (inventoryResponse.ok) {
+            const inventoryData = await inventoryResponse.json();
+            if (inventoryData.data) {
+                const source = inventoryData.data.source || 'Unknown';
+                console.log(`✅ Level 1 SUCCESS: Found "${inventoryData.data.itemName}" from ${source}`);
+                return inventoryData.data;
+            }
+        } else {
+            console.log(`   ℹ️  Not found via Level 1 endpoint`);
+        }
+        
+        // Step 2: Try case-insensitive match by fetching all inventory
+        console.log(`🔍 Level 2: Trying case-insensitive search...`);
+        try {
+            const allInventoryResponse = await fetch(`${BACKEND_URL}/api/inventory`, {
+                method: 'GET',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include'
+            });
+            
+            if (allInventoryResponse.ok) {
+                const allInventoryData = await allInventoryResponse.json();
+                if (allInventoryData.success && Array.isArray(allInventoryData.data)) {
+                    const nameLower = itemName.toLowerCase().trim();
+                    
+                    // Try exact case-insensitive match
+                    let match = allInventoryData.data.find(item => 
+                        item.itemName && item.itemName.toLowerCase().trim() === nameLower
+                    );
+                    
+                    if (match) {
+                        console.log(`✅ Level 2 SUCCESS: Found via case-insensitive match: "${match.itemName}"`);
+                        return match;
+                    }
+                    
+                    // Try fuzzy match (remove special characters and spaces)
+                    console.log(`🔍 Level 3: Trying fuzzy match (remove special chars)...`);
+                    const nameNormalized = itemName.toLowerCase().replace(/[^a-z0-9]/g, '');
+                    match = allInventoryData.data.find(item => 
+                        item.itemName && item.itemName.toLowerCase().replace(/[^a-z0-9]/g, '') === nameNormalized
+                    );
+                    
+                    if (match) {
+                        console.log(`✅ Level 3 SUCCESS: Found via fuzzy match: "${match.itemName}"`);
+                        return match;
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Error in case-insensitive search:', error);
+        }
+        
+        console.error(`❌ ALL LEVELS FAILED: Item "${itemName}" not found in inventory or menu`);
+        return null;
+    } catch (error) {
+        console.error('❌ Error finding inventory item:', error);
+        return null;
+    }
+}
+
+// ==================== SEND STOCK - BATCH ====================
+async function sendStockBatch() {
+    try {
+        let totalItems = 0;
+        let successCount = 0;
+        let failedItems = [];
+        
+        // Get all inputs with quantity values
+        const quantityInputs = document.querySelectorAll('input[type="number"]');
+        
+        for (const input of quantityInputs) {
+            const quantity = parseInt(input.value) || 0;
+            if (quantity <= 0) continue;
+            
+            const stockId = input.getAttribute('data-stock-id');
+            if (!stockId) continue;
+            
+            totalItems++;
+            const stock = stocksData.find(item => item.id === parseInt(stockId));
+            if (!stock) {
+                failedItems.push(stock.name);
+                continue;
+            }
+            
+            try {
+                console.log(`📦 Sending ${quantity} ${stock.unit} of ${stock.name}...`);
+                
+                // Find inventory item with flexible matching
+                const inventoryItem = await findInventoryItem(stock.name);
+                
+                if (!inventoryItem) {
+                    failedItems.push(stock.name);
+                    console.warn(`⚠️ Could not find inventory item for "${stock.name}"`);
+                    continue;
+                }
+                
+                // Update inventory
+                const currentStock = parseFloat(inventoryItem.currentStock) || 0;
+                const newStock = currentStock + quantity;
+                
+                const updateResponse = await fetch(`${BACKEND_URL}/api/inventory/${inventoryItem._id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ currentStock: newStock })
+                });
+                
+                if (updateResponse.ok) {
+                    successCount++;
+                    input.value = '';
+                    console.log(`✅ Successfully sent ${quantity} ${stock.unit} of ${stock.name}`);
+                } else {
+                    failedItems.push(stock.name);
+                    console.error(`❌ Failed to update ${stock.name}`);
+                }
+            } catch (error) {
+                failedItems.push(stock.name);
+                console.error(`Error sending stock for ${stock.name}:`, error);
+            }
+        }
+        
+        if (totalItems > 0) {
+            let message = `✅ Sent stock for ${successCount}/${totalItems} items to staff!`;
+            if (failedItems.length > 0) {
+                message += `\n\n❌ Failed items:\n${failedItems.join('\n')}`;
+            }
+            showToast(message, 'success');
+            renderSendStockTable();
+        } else {
+            showToast('⚠️ No quantities entered', 'warning');
+        }
+    } catch (error) {
+        console.error('Error in batch send:', error);
+        showToast('❌ Error sending batch', 'error');
+    }
 }
 
 // Send stock
-function sendStock(id) {
+async function sendStock(id) {
     const stock = stocksData.find(item => item.id === id);
-    if (stock) {
-        alert(`Sending stocks for: ${stock.name}\nCurrent Quantity: ${stock.quantity} ${stock.unit}\nCategory: ${stock.category}`);
+    if (!stock) {
+        alert('Item not found');
+        return;
+    }
+    
+    // Get the quantity to send from the input field
+    const quantityInput = document.querySelector(`input[data-stock-id="${id}"]`);
+    const quantityToSend = quantityInput ? parseInt(quantityInput.value) || 0 : stock.quantity;
+    
+    if (quantityToSend <= 0) {
+        alert('Please enter a valid quantity');
+        return;
+    }
+    
+    try {
+        console.log(`📦 Sending ${quantityToSend} ${stock.unit} of ${stock.name} to staff...`);
+        
+        // Use the helper function for flexible name matching
+        // This searches both raw ingredients and menu items
+        const inventoryItem = await findInventoryItem(stock.name);
+        
+        if (!inventoryItem) {
+            console.error(`❌ Item "${stock.name}" not found in inventory or menu`);
+            
+            // Try to show helpful suggestions
+            try {
+                const allResponse = await fetch(`${BACKEND_URL}/api/inventory`, {
+                    method: 'GET',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include'
+                });
+                
+                if (allResponse.ok) {
+                    const allData = await allResponse.json();
+                    if (allData.success && Array.isArray(allData.data)) {
+                        const similarItems = allData.data
+                            .filter(item => item.itemName && item.itemName.toLowerCase().includes(stock.name.toLowerCase().split(' ')[0]))
+                            .map(item => `"${item.itemName}"`)
+                            .slice(0, 5);
+                        
+                        let errorMsg = `Item "${stock.name}" not found in inventory or menu.\n\n`;
+                        if (similarItems.length > 0) {
+                            errorMsg += `Did you mean one of these?\n${similarItems.join('\n')}\n\n`;
+                        }
+                        errorMsg += `Available items:\n${allData.data.map(item => item.itemName).join('\n')}`;
+                        alert(errorMsg);
+                    } else {
+                        alert(`Item "${stock.name}" not found in inventory or menu`);
+                    }
+                } else {
+                    alert(`Item "${stock.name}" not found in inventory or menu`);
+                }
+            } catch (error) {
+                alert(`Item "${stock.name}" not found in inventory or menu`);
+            }
+            return;
+        }
+        
+        // Update inventory with new stock (add the quantity sent)
+        const currentStock = parseFloat(inventoryItem.currentStock) || 0;
+        const newStock = currentStock + quantityToSend;
+        
+        const updateResponse = await fetch(`${BACKEND_URL}/api/inventory/${inventoryItem._id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+                currentStock: newStock
+            })
+        });
+        
+        if (updateResponse.ok) {
+            console.log(`✅ Successfully sent ${quantityToSend} ${stock.unit} of ${stock.name}`);
+            console.log(`📊 Stock updated: ${currentStock} → ${newStock} ${stock.unit}`);
+            
+            // Clear the input field
+            if (quantityInput) {
+                quantityInput.value = '';
+            }
+            
+            // Show success message
+            showToast(`✅ Sent ${quantityToSend} ${stock.unit} of ${stock.name} to staff!`, 'success');
+            
+            // Re-render the table
+            renderSendStockTable();
+        } else {
+            const errorData = await updateResponse.json();
+            alert(`Failed to send stock: ${errorData.message || 'Unknown error'}`);
+        }
+    } catch (error) {
+        console.error('❌ Error sending stock:', error);
+        alert(`Failed to send stock: ${error.message}`);
     }
 }
 
