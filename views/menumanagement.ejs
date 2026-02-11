@@ -113,6 +113,7 @@
                             <li class="nav-item">
                                 <a href="#" class="nav-link" data-section="sendstock">
                                     <span class="nav-icon">Send Stocks</span>
+                                    <span id="pendingStockBadge" style="display: none; position: absolute; right: 10px; background: #FF6B6B; color: white; border-radius: 50%; width: 24px; height: 24px; font-size: 12px; font-weight: bold; align-items: center; justify-content: center; min-width: 24px;">0</span>
                                 </a>
                             </li>
                         </ul>
@@ -165,7 +166,7 @@
                                 <div class="empty-state-icon icon-empty">No Products</div>
                                 <h3>No Products Available</h3>
                                 <p>Add your first menu item to see analytics here</p>
-                                <button class="btn btn-primary" id="addFirstItemBtn" type="button">Add First Product</button>
+                                <button class="btn btn-primary" id="addFirstItemBtn" type="button" title="Add first product">Add First Product</button>
                             </div>
                         </div>
                     </section>
@@ -176,7 +177,7 @@
                                 <h2 id="currentCategoryTitle">Product Menu</h2>
                             </div>
                             <div class="action-buttons">
-                                <button class="btn btn-primary" id="addNewItem" type="button">Add New Product</button>
+                                <button class="btn btn-primary" id="addNewItem" type="button" title="Click to add a new product to the menu">Add New Product</button>
                             </div>
                         </div>
 
@@ -185,7 +186,7 @@
                                 <div class="empty-state-icon icon-empty">No Products</div>
                                 <h3>No Products Available</h3>
                                 <p>Get started by adding your first menu item</p>
-                                <button class="btn btn-primary" id="addFirstMenuBtn" type="button">Add New Product</button>
+                                <button class="btn btn-primary" id="addFirstMenuBtn" type="button" title="Add first menu product">Add New Product</button>
                             </div>
                         </div>
                     </section>

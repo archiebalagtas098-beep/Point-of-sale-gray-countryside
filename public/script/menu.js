@@ -8,8 +8,383 @@ let currentSection = 'dashboard';
 let currentCategory = 'all';
 let isModalOpen = false;
 let retryCount = 0;
+let currentInventoryCache = []; // Cache for current inventory items
+let lastInventoryCacheTime = 0; // Timestamp of last inventory fetch
+
 const MAX_RETRIES = 3;
 const BACKEND_URL = 'http://localhost:5050';
+const INVENTORY_CACHE_DURATION = 5000; // Refresh cache every 5 seconds
+
+// ==================== RECIPE MAPPING (Ingredient to Menu Items) ====================
+// Maps each RAW INGREDIENT to all MENU ITEMS that use it
+// When ingredient stock = 0, the associated menu items become UNAVAILABLE
+const recipeMapping = {
+    // ===== MEAT & POULTRY =====
+    'Chicken': [
+        'Fried Chicken',
+        'Buttered Honey Chicken',
+        'Buttered Spicy Chicken',
+        'Chicken Adobo',
+        'Sizzling Fried Chicken'
+    ],
+    
+    'Pork slices': [
+        'Korean Spicy Bulgogi (Pork)',
+        'Korean Salt and Pepper (Pork)',
+        'Pork Adobo',
+        'Sizzling Pork'
+    ],
+    
+    'Pork belly': [
+        'Crisky Pork Lechon Kawali',
+        'Sizzling Liempo'
+    ],
+    
+    'Pork ribs': [
+        'Sizzling Porkchop'
+    ],
+    
+    'Ground pork': [
+        'Pork Shanghai'
+    ],
+    
+    'Bacon': [
+    ],
+    
+    'Ham': [
+    ],
+    
+    'Beef shanks': [
+    ],
+    
+    // ===== SEAFOOD =====
+    'Cream dory fillet': [
+        'Cream Dory Fish Fillet',
+        'Fish and Fries'
+    ],
+    
+    'Shrimp': [
+        'Sinigang (Shrimp)',
+        'Buttered Shrimp'
+    ],
+    
+    'Smoked fish': [
+        'Tinapa Rice',
+        'Tuyo Pesto'
+    ],
+    
+    // ===== VEGETABLES & HERBS =====
+    'Garlic': [
+        'Korean Spicy Bulgogi (Pork)',
+        'Korean Salt and Pepper (Pork)',
+        'Crisky Pork Lechon Kawali',
+        'Sizzling Liempo',
+        'Sizzling Porkchop',
+        'Sizzling Pork Sisig',
+        'Sizzling Fried Chicken',
+        'Pork Shanghai',
+        'Pork Adobo',
+        'Chicken Adobo',
+        'Sinigang (PORK)',
+        'Sinigang (Shrimp)',
+        'Paknet (Pakbet w/ Bagnet)',
+        'Special Bulalo (good for 2-3 Persons)',
+        'Special Bulalo Buy 1 Take 1 (good for 6-8 Persons)',
+        'Pancit Bihon (S)',
+        'Pancit Bihon (M)',
+        'Pancit Bihon (L)',
+        'Pancit Canton (S)',
+        'Pancit Canton (M)',
+        'Pancit Canton (L)',
+        'Spaghetti (S)',
+        'Spaghetti (M)',
+        'Spaghetti (L)'
+    ],
+    
+    'Onion': [
+        'Korean Spicy Bulgogi (Pork)',
+        'Korean Salt and Pepper (Pork)',
+        'Crisky Pork Lechon Kawali',
+        'Pork Adobo',
+        'Sizzling Pork Sisig',
+        'Chicken Adobo',
+        'Sinigang (PORK)',
+        'Sinigang (Shrimp)',
+        'Paknet (Pakbet w/ Bagnet)',
+        'Special Bulalo (good for 2-3 Persons)',
+        'Special Bulalo Buy 1 Take 1 (good for 6-8 Persons)',
+        'Fried Rice',
+        'Pancit Bihon (S)',
+        'Pancit Bihon (M)',
+        'Pancit Bihon (L)',
+        'Pancit Canton (S)',
+        'Pancit Canton (M)',
+        'Pancit Canton (L)',
+        'Spaghetti (S)',
+        'Spaghetti (M)',
+        'Spaghetti (L)'
+    ],
+    
+    'Carrots': [
+        'Sinigang (PORK)',
+        'Sinigang (Shrimp)',
+        'Paknet (Pakbet w/ Bagnet)',
+        'Special Bulalo (good for 2-3 Persons)',
+        'Special Bulalo Buy 1 Take 1 (good for 6-8 Persons)'
+    ],
+    
+    'Cabbage': [
+        'Paknet (Pakbet w/ Bagnet)'
+    ],
+    
+    'Lettuce': [
+        'Clubhouse Sandwich'
+    ],
+    
+    'Ginger': [
+        'Sinigang (PORK)',
+        'Sinigang (Shrimp)',
+        'Special Bulalo (good for 2-3 Persons)',
+        'Special Bulalo Buy 1 Take 1 (good for 6-8 Persons)'
+    ],
+    
+    'Calamansi': [
+        'Sinigang (PORK)',
+        'Sinigang (Shrimp)'
+    ],
+    
+    'Tomato': [
+        'Pork Adobo',
+        'Chicken Adobo',
+        'Sinigang (PORK)',
+        'Sinigang (Shrimp)',
+        'Paknet (Pakbet w/ Bagnet)'
+    ],
+    
+    // ===== PANTRY STAPLES =====
+    'Soy sauce': [
+        'Korean Spicy Bulgogi (Pork)',
+        'Korean Salt and Pepper (Pork)',
+        'Pork Adobo',
+        'Chicken Adobo',
+        'Sizzling Pork Sisig',
+        'Pancit Bihon (S)',
+        'Pancit Bihon (M)',
+        'Pancit Bihon (L)',
+        'Pancit Canton (S)',
+        'Pancit Canton (M)',
+        'Pancit Canton (L)',
+        'Spaghetti (S)',
+        'Spaghetti (M)',
+        'Spaghetti (L)',
+        'Fried Rice'
+    ],
+    
+    'Cooking oil': [
+        'Fried Chicken',
+        'Buttered Honey Chicken',
+        'Buttered Spicy Chicken',
+        'Sizzling Fried Chicken',
+        'Sizzling Pork Sisig',
+        'Sizzling Liempo',
+        'Sizzling Porkchop',
+        'Crisky Pork Lechon Kawali',
+        'French fries',
+        'Fish and Fries',
+        'Cheesy Dynamite Lumpia',
+        'Lumpiang Shanghai',
+        'Fried Rice',
+        'Cheesy Nachos',
+        'Nachos Supreme'
+    ],
+    
+    'Salt': [
+        'Korean Spicy Bulgogi (Pork)',
+        'Korean Salt and Pepper (Pork)',
+        'Pork Adobo',
+        'Chicken Adobo',
+        'Fried Chicken',
+        'Buttered Honey Chicken',
+        'Buttered Spicy Chicken',
+        'Sizzling Fried Chicken',
+        'Sizzling Pork Sisig',
+        'Sizzling Liempo',
+        'Sizzling Porkchop',
+        'Crisky Pork Lechon Kawali',
+        'Cream Dory Fish Fillet',
+        'Fish and Fries',
+        'Sinigang (PORK)',
+        'Sinigang (Shrimp)',
+        'Paknet (Pakbet w/ Bagnet)',
+        'Buttered Shrimp',
+        'Special Bulalo (good for 2-3 Persons)',
+        'Special Bulalo Buy 1 Take 1 (good for 6-8 Persons)',
+        'Fried Rice',
+        'Plain Rice',
+        'Pancit Bihon (S)',
+        'Pancit Bihon (M)',
+        'Pancit Bihon (L)',
+        'Pancit Canton (S)',
+        'Pancit Canton (M)',
+        'Pancit Canton (L)',
+        'Spaghetti (S)',
+        'Spaghetti (M)',
+        'Spaghetti (L)'
+    ],
+    
+    'Black pepper': [
+        'Korean Spicy Bulgogi (Pork)',
+        'Korean Salt and Pepper (Pork)',
+        'Sizzling Pork Sisig',
+        'Fried Chicken',
+        'Sinigang (PORK)',
+        'Sinigang (Shrimp)',
+        'Paknet (Pakbet w/ Bagnet)',
+        'Buttered Shrimp'
+    ],
+    
+    'Sugar': [
+        'Korean Spicy Bulgogi (Pork)',
+        'Pork Adobo',
+        'Chicken Adobo',
+        'Sizzling Pork Sisig',
+        'Cucumber Lemonade (Glass)',
+        'Cucumber Lemonade (Pitcher)',
+        'Blue Lemonade (Glass)',
+        'Blue Lemonade (Pitcher)',
+        'Red Tea (Glass)',
+        'Matcha Green Tea HC',
+        'Matcha Green Tea MC',
+        'Milk Tea Regular HC',
+        'Milk Tea Regular MC'
+    ],
+    
+    'Brown sugar': [
+    ],
+    
+    'Vinegar': [
+    ],
+    
+    'Water': [
+    ],
+    
+    // ===== DAIRY & EGGS =====
+    'Eggs': [
+        'Fried Rice',
+        'Omelette',
+        'Scrambled Eggs'
+    ],
+    
+    'Butter': [
+        'Buttered Honey Chicken',
+        'Buttered Spicy Chicken',
+        'Buttered Shrimp',
+        'Garlic Bread'
+    ],
+    
+    'Milk': [
+        'Milk Tea Regular HC',
+        'Milk Tea Regular MC',
+        'Cafe Americano Tall',
+        'Cafe Americano Grande',
+        'Cafe Latte Tall',
+        'Cafe Latte Grande',
+        'Caramel Macchiato Tall',
+        'Caramel Macchiato Grande',
+        'Matcha Green Tea HC',
+        'Matcha Green Tea MC',
+        'Cookies & Cream HC',
+        'Cookies & Cream MC',
+        'Strawberry & Cream HC',
+        'Mango cheese cake HC'
+    ],
+    
+    'Cheese': [
+        'Cheesy Nachos',
+        'Nachos Supreme',
+        'Cheesy Dynamite Lumpia'
+    ],
+    
+    // ===== BEVERAGES =====
+    'Coke': [
+        'Soda (Mismo)',
+        'Soda 1.5L'
+    ],
+    
+    'Sprite': [
+        'Soda (Mismo)',
+        'Soda 1.5L'
+    ],
+    
+    // ===== PACKAGING (These prevent items if out of stock) =====
+    'Paper cups': [
+        'Cafe Americano Tall',
+        'Cafe Americano Grande',
+        'Cafe Latte Tall',
+        'Cafe Latte Grande',
+        'Caramel Macchiato Tall',
+        'Caramel Macchiato Grande',
+        'Milk Tea Regular HC',
+        'Milk Tea Regular MC',
+        'Matcha Green Tea HC',
+        'Matcha Green Tea MC',
+        'Cookies & Cream HC',
+        'Cookies & Cream MC',
+        'Strawberry & Cream HC',
+        'Mango cheese cake HC',
+        'Cucumber Lemonade (Glass)',
+        'Blue Lemonade (Glass)',
+        'Red Tea (Glass)'
+    ],
+    
+    'Straws': [
+        'Milk Tea Regular HC',
+        'Milk Tea Regular MC',
+        'Matcha Green Tea HC',
+        'Matcha Green Tea MC',
+        'Cookies & Cream HC',
+        'Cookies & Cream MC',
+        'Strawberry & Cream HC',
+        'Mango cheese cake HC',
+        'Cucumber Lemonade (Glass)',
+        'Cucumber Lemonade (Pitcher)',
+        'Blue Lemonade (Glass)',
+        'Blue Lemonade (Pitcher)',
+        'Red Tea (Glass)'
+    ],
+    
+    'Napkins': [
+        'Korean Spicy Bulgogi (Pork)',
+        'Korean Salt and Pepper (Pork)',
+        'Crisky Pork Lechon Kawali',
+        'Cream Dory Fish Fillet',
+        'Buttered Honey Chicken',
+        'Buttered Spicy Chicken',
+        'Chicken Adobo',
+        'Pork Adobo',
+        'Sizzling Fried Chicken',
+        'Sizzling Pork Sisig',
+        'Sizzling Liempo',
+        'Sizzling Porkchop',
+        'Cheesy Nachos',
+        'Nachos Supreme',
+        'French fries',
+        'Clubhouse Sandwich',
+        'Fish and Fries',
+        'Cheesy Dynamite Lumpia',
+        'Lumpiang Shanghai',
+        'Pork Shanghai',
+        'Tinapa Rice',
+        'Tuyo Pesto',
+        'Sinigang (PORK)',
+        'Sinigang (Shrimp)',
+        'Paknet (Pakbet w/ Bagnet)',
+        'Buttered Shrimp',
+        'Special Bulalo (good for 2-3 Persons)',
+        'Special Bulalo Buy 1 Take 1 (good for 6-8 Persons)',
+        'Fried Chicken'
+    ]
+};
 
 // Menu Database - Keep this section exactly as is
 const menuDatabase = {
@@ -207,18 +582,28 @@ const elements = {
 };
 
 // ==================== INITIALIZATION ====================
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
     console.log('🚀 Menu Management System initializing...');
     
     // Initialize notification system
     addNotificationStyles();
     initializeNotificationSystem();
     
+    // Connect to real-time notifications from admin events
+    connectToAdminEvents();
+    
     // Initialize event listeners
     initializeEventListeners();
     
     // Initialize categories dropdown
     initializeCategoryDropdown();
+    
+    // Pre-load inventory cache for menu filtering
+    console.log('📦 Pre-loading inventory for menu filtering...');
+    await getInventoryCache();
+    
+    // Check and disable buttons based on inventory
+    updateAddButtonStates();
     
     // Try to load from localStorage first
     loadFromLocalStorage();
@@ -235,8 +620,18 @@ document.addEventListener('DOMContentLoaded', function() {
         console.error('❌ Error loading menu items:', error);
     });
     
-    // Set up auto-refresh
+    // Set up auto-refresh of menu items
     setInterval(fetchMenuItems, 30000);
+    
+    // Set up periodic check of button states (every 15 seconds)
+    setInterval(updateAddButtonStates, 15000);
+    
+    // Set up periodic inventory cache refresh (every 5 seconds)
+    setInterval(getInventoryCache, INVENTORY_CACHE_DURATION);
+    
+    // Load pending stock requests for notifications
+    loadPendingStockRequests();
+    setInterval(loadPendingStockRequests, 30000);
     
     console.log('✅ System initialized');
 });
@@ -280,6 +675,97 @@ function initializeCategoryDropdown() {
         option.textContent = categoryDisplayNames[category];
         elements.itemCategory.appendChild(option);
     });
+}
+
+// ==================== REAL-TIME EVENTS (EventSource) ====================
+function connectToAdminEvents() {
+    try {
+        const eventSource = new EventSource(`${BACKEND_URL}/api/admin/events`);
+        
+        eventSource.addEventListener('message', function(event) {
+            try {
+                const data = JSON.parse(event.data);
+                console.log('📨 Real-time notification received:', data);
+                
+                // Handle stock request notifications
+                if (data.type === 'stock_request') {
+                    handleStockRequestNotification(data);
+                }
+                // Handle other notification types
+                else if (data.type === 'low_stock_alert') {
+                    handleLowStockAlert(data);
+                }
+                // Handle connection confirmation
+                else if (data.type === 'connected') {
+                    console.log('✅ Connected to admin real-time updates');
+                }
+            } catch (error) {
+                console.error('Error parsing event data:', error);
+            }
+        });
+        
+        eventSource.addEventListener('error', function(error) {
+            console.error('❌ EventSource connection error:', error);
+            eventSource.close();
+            // Attempt to reconnect after 5 seconds
+            setTimeout(connectToAdminEvents, 5000);
+        });
+        
+        console.log('🔌 Connected to real-time admin events');
+    } catch (error) {
+        console.error('Error connecting to admin events:', error);
+        // Retry connection after 5 seconds
+        setTimeout(connectToAdminEvents, 5000);
+    }
+}
+
+function handleStockRequestNotification(data) {
+    // Add notification to the notification center
+    const notification = {
+        id: data.requestId || Date.now(),
+        productName: data.productName,
+        message: `📦 Staff requested ${data.requestedQuantity} ${data.unit} of ${data.productName} (${data.priority} priority)`,
+        timestamp: new Date(data.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        date: new Date(data.timestamp).toLocaleDateString(),
+        read: false,
+        type: 'stock_request',
+        priority: data.priority,
+        data: data.data
+    };
+
+    notifications.unshift(notification);
+    hasNewNotifications = true;
+    updateNotificationBadge();
+
+    // Show toast notification
+    const priorityEmoji = {
+        'normal': '📦',
+        'urgent': '⚠️',
+        'asap': '🔴'
+    }[data.priority] || '📦';
+
+    showToast(`${priorityEmoji} Stock request: ${data.productName} (${data.requestedQuantity} ${data.unit})`, 'info');
+
+    console.log(`✅ Stock request notification handled for ${data.productName}`);
+}
+
+function handleLowStockAlert(data) {
+    // Add notification for low stock alerts
+    const notification = {
+        id: Date.now(),
+        productName: data.productName,
+        message: `⚠️ Low stock alert: ${data.productName} has only ${data.currentStock} ${data.unit} left`,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        date: new Date().toLocaleDateString(),
+        read: false,
+        type: 'low_stock'
+    };
+    
+    notifications.unshift(notification);
+    hasNewNotifications = true;
+    updateNotificationBadge();
+    
+    showToast(`⚠️ Low stock: ${data.productName}`, 'warning');
 }
 
 // ==================== NOTIFICATION SYSTEM ====================
@@ -350,37 +836,132 @@ function addNotificationStyles() {
             color: #212529;
         }
         
+        .toast-info {
+            background: #17a2b8;
+        }
+        
         .show {
             opacity: 1 !important;
             transform: translateX(0) !important;
+        }
+
+        #notificationNavItem {
+            position: relative;
+            list-style: none;
+            margin-left: auto;
+        }
+
+        .notification-icon {
+            position: relative;
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            padding: 8px 12px;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+        
+        .notification-icon:hover {
+            background: rgba(0,0,0,0.05);
+        }
+        
+        .notification-icon i {
+            font-size: 20px;
+            color: #333;
+            margin-right: 8px;
+        }
+        
+        .notification-icon span {
+            font-size: 14px;
+            color: #333;
+        }
+
+        .notification-badge {
+            position: absolute;
+            top: 0;
+            right: 0;
+            background: #dc3545;
+            color: white;
+            font-size: 11px;
+            font-weight: bold;
+            border-radius: 50%;
+            min-width: 18px;
+            height: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 4px;
+            border: 2px solid white;
+        }
+
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin: 0;
+            padding: 0;
+            list-style: none;
+        }
+
+        .nav-link {
+            color: #333;
+            text-decoration: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+
+        .nav-link:hover {
+            background: rgba(0,0,0,0.05);
+        }
+
+        .nav-link.active {
+            background: #007bff;
+            color: white;
+        }
+
+        .nav-link.active i,
+        .nav-link.active span {
+            color: white;
         }
     `;
     document.head.appendChild(style);
 }
 
 function initializeNotificationSystem() {
-    // Create notification button in navbar if it doesn't exist
+    // Find the nav-links container
     const navLinks = document.querySelector('.nav-links');
-    if (navLinks && !document.getElementById('notificationNavItem')) {
-        const notificationNavItem = document.createElement('li');
-        notificationNavItem.id = 'notificationNavItem';
-        notificationNavItem.style.cssText = `position: relative; list-style: none;`;
-        
-        const notificationBtn = document.createElement('a');
-        notificationBtn.href = '#';
-        notificationBtn.className = 'nav-link';
-        notificationBtn.innerHTML = `
-            <span>Notifications</span>
-            <span id="notificationBadge" class="notification-badge" style="display: none;">0</span>
-        `;
-        notificationBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            toggleNotificationModal();
-        });
-        
-        notificationNavItem.appendChild(notificationBtn);
-        navLinks.appendChild(notificationNavItem);
+    if (!navLinks) {
+        console.warn('⚠️ nav-links element not found');
+        return;
     }
+    
+    // Remove existing notification nav item if it exists
+    const existingNavItem = document.getElementById('notificationNavItem');
+    if (existingNavItem) {
+        existingNavItem.remove();
+    }
+    
+    // Create notification nav item
+    const notificationNavItem = document.createElement('li');
+    notificationNavItem.id = 'notificationNavItem';
+    notificationNavItem.style.cssText = 'position: relative; list-style: none; margin-left: auto;';
+    
+    const notificationBtn = document.createElement('a');
+    notificationBtn.href = '#';
+    notificationBtn.className = 'nav-link notification-icon';
+    notificationBtn.innerHTML = `
+        <i class="fas fa-bell"></i>
+        <span>Notifications</span>
+        <span id="notificationBadge" class="notification-badge" style="display: none;">0</span>
+    `;
+    notificationBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        toggleNotificationModal();
+    });
+    
+    notificationNavItem.appendChild(notificationBtn);
+    navLinks.appendChild(notificationNavItem);
     
     // Create notification container
     let notificationContainer = document.getElementById('notificationContainer');
@@ -427,7 +1008,14 @@ function initializeNotificationSystem() {
             font-size: 14px;
             padding: 5px 10px;
             border-radius: 4px;
+            transition: background 0.2s;
         `;
+        clearAllBtn.addEventListener('mouseenter', function() {
+            this.style.background = 'rgba(220,53,69,0.1)';
+        });
+        clearAllBtn.addEventListener('mouseleave', function() {
+            this.style.background = 'none';
+        });
         clearAllBtn.addEventListener('click', clearAllNotifications);
         
         notificationHeader.appendChild(headerTitle);
@@ -453,7 +1041,14 @@ function initializeNotificationSystem() {
             cursor: pointer;
             color: #333;
             font-size: 14px;
+            transition: background 0.2s;
         `;
+        closeBtn.addEventListener('mouseenter', function() {
+            this.style.background = '#e9ecef';
+        });
+        closeBtn.addEventListener('mouseleave', function() {
+            this.style.background = '#f8f9fa';
+        });
         closeBtn.addEventListener('click', toggleNotificationModal);
         
         notificationContainer.appendChild(notificationHeader);
@@ -486,22 +1081,21 @@ function toggleNotificationModal() {
     }
 }
 
-function addNotification(productName, message) {
+function addNotification(productName, message, type = 'info') {
     const notification = {
-        id: Date.now(),
+        id: Date.now() + Math.random(),
         productName: productName,
         message: message,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         date: new Date().toLocaleDateString(),
-        read: false
+        read: false,
+        type: type
     };
     
     notifications.unshift(notification);
     hasNewNotifications = true;
     updateNotificationBadge();
     renderNotifications();
-    
-    showToast(`New notification: ${productName} is out of stock`, 'warning');
 }
 
 function updateNotificationBadge() {
@@ -522,6 +1116,7 @@ function updateNotificationBadge() {
         }
     } else {
         badge.style.display = 'none';
+        badge.style.animation = 'none';
     }
 }
 
@@ -556,7 +1151,7 @@ function renderNotifications() {
         
         const productName = document.createElement('div');
         productName.style.cssText = `font-weight: 600; color: #333; margin-bottom: 5px; font-size: 14px;`;
-        productName.textContent = notification.productName;
+        productName.textContent = notification.productName || 'System Notification';
         
         const message = document.createElement('div');
         message.style.cssText = `color: #666; font-size: 13px; margin-bottom: 5px;`;
@@ -604,7 +1199,8 @@ function checkOutOfStockItems() {
         if (!recentNotification) {
             addNotification(
                 item.name || item.itemName,
-                'Out of stock'
+                'Out of stock',
+                'warning'
             );
         }
     });
@@ -618,6 +1214,19 @@ function initializeEventListeners() {
     if (elements.addNewItem) {
         elements.addNewItem.addEventListener('click', openAddModal);
         console.log('✅ Add new item button listener added');
+    }
+    
+    // Add first item buttons (empty state buttons)
+    const addFirstItemBtn = document.getElementById('addFirstItemBtn');
+    if (addFirstItemBtn) {
+        addFirstItemBtn.addEventListener('click', openAddModal);
+        console.log('✅ Add first item button listener added');
+    }
+    
+    const addFirstMenuBtn = document.getElementById('addFirstMenuBtn');
+    if (addFirstMenuBtn) {
+        addFirstMenuBtn.addEventListener('click', openAddModal);
+        console.log('✅ Add first menu button listener added');
     }
     
     // Save item button
@@ -1190,6 +1799,88 @@ function filterByCategory(category, fullname) {
 }
 
 // ==================== RENDER MENU GRID ====================
+// Check if a menu item can be made (all required ingredients in stock)
+async function canMenuItemBeMade(itemName) {
+    try {
+        // Get the recipe mapping from recipeMapping
+        if (!recipeMapping) {
+            console.warn('⚠️ Recipe mapping not available');
+            return true; // If no recipe mapping, assume it can be made
+        }
+        
+        // Find which ingredients this menu item requires
+        let requiredIngredients = [];
+        for (const ingredient in recipeMapping) {
+            if (recipeMapping[ingredient].includes(itemName)) {
+                requiredIngredients.push(ingredient);
+            }
+        }
+        
+        // If no recipe found, it can be made (e.g., packaging items)
+        if (requiredIngredients.length === 0) {
+            return true;
+        }
+        
+        // Get cached inventory or fetch if needed
+        const inventoryItems = await getInventoryCache();
+        
+        // Check if ALL required ingredients are in stock
+        let allInStock = true;
+        requiredIngredients.forEach(ingredient => {
+            const inventoryItem = inventoryItems.find(item => item.itemName === ingredient);
+            const stock = inventoryItem ? parseFloat(inventoryItem.currentStock || 0) : 0;
+            
+            if (stock <= 0) {
+                allInStock = false;
+            }
+        });
+        
+        return allInStock;
+    } catch (error) {
+        console.error('❌ Error checking if item can be made:', error);
+        return true; // If error, assume it can be made
+    }
+}
+
+// Get inventory from cache or fetch if cache is outdated
+async function getInventoryCache() {
+    try {
+        const now = Date.now();
+        
+        // If cache is fresh, return it
+        if (currentInventoryCache.length > 0 && (now - lastInventoryCacheTime) < INVENTORY_CACHE_DURATION) {
+            return currentInventoryCache;
+        }
+        
+        // Fetch fresh inventory
+        const inventoryResponse = await fetch('/api/inventory', {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+            },
+            credentials: 'include'
+        });
+        
+        if (!inventoryResponse.ok) {
+            console.warn('⚠️ Could not fetch inventory data');
+            return currentInventoryCache; // Return cached data if fetch fails
+        }
+        
+        const inventoryData = await inventoryResponse.json();
+        const inventoryItems = inventoryData.data || inventoryData || [];
+        
+        // Update cache
+        currentInventoryCache = inventoryItems;
+        lastInventoryCacheTime = now;
+        
+        return inventoryItems;
+    } catch (error) {
+        console.error('❌ Error getting inventory cache:', error);
+        return currentInventoryCache;
+    }
+}
+
 function renderMenuGrid() {
     console.log('🎨 Rendering menu grid...');
     console.log('📊 Current category:', currentCategory);
@@ -1231,7 +1922,52 @@ function renderMenuGrid() {
     
     console.log(`🎯 Rendering ${filteredItems.length} items`);
     
-    const gridHTML = filteredItems.map(item => {
+    // Filter items to only show those that can be made (all ingredients in stock)
+    let availableItems = filteredItems.filter(item => {
+        const itemName = item.name || item.itemName || 'Unnamed Product';
+        
+        // Get required ingredients for this item
+        let requiredIngredients = [];
+        if (recipeMapping) {
+            for (const ingredient in recipeMapping) {
+                if (recipeMapping[ingredient].includes(itemName)) {
+                    requiredIngredients.push(ingredient);
+                }
+            }
+        }
+        
+        // If no recipe, show it (e.g., packaging items)
+        if (requiredIngredients.length === 0) {
+            return true;
+        }
+        
+        // Check if all required ingredients are in stock using cached inventory
+        let canBeMade = true;
+        requiredIngredients.forEach(ingredient => {
+            const inventoryItem = currentInventoryCache.find(inv => inv.itemName === ingredient);
+            const stock = inventoryItem ? parseFloat(inventoryItem.currentStock || 0) : 0;
+            
+            if (stock <= 0) {
+                canBeMade = false;
+            }
+        });
+        
+        return canBeMade;
+    });
+    
+    if (availableItems.length === 0) {
+        console.log('📭 No items can be made with current inventory');
+        elements.menuGrid.innerHTML = `
+            <div class="empty-state">
+                <h3>⚠️ No Available Products</h3>
+                <p>Some or all required ingredients are out of stock</p>
+                <p>Please restock ingredients in Inventory to make these items available</p>
+            </div>
+        `;
+        return;
+    }
+    
+    const gridHTML = availableItems.map(item => {
         const itemName = item.name || item.itemName || 'Unnamed Product';
         const itemPrice = item.price || 0;
         const currentStock = item.currentStock || 0;
@@ -1417,8 +2153,96 @@ function updateCategoryCounts() {
 }
 
 // ==================== FIXED MODAL FUNCTIONS ====================
+
+// Check if ANY ingredients have stock (at least one ingredient > 0)
+async function checkIfAnyIngredientsInStock() {
+    try {
+        console.log('🔍 Checking if any ingredients are in stock...');
+        
+        // Fetch current inventory from API
+        const inventoryResponse = await fetch('/api/inventory', {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+            },
+            credentials: 'include'
+        });
+        
+        if (!inventoryResponse.ok) {
+            console.warn('⚠️ Could not fetch inventory data');
+            return false;
+        }
+        
+        const inventoryData = await inventoryResponse.json();
+        const inventoryItems = inventoryData.data || inventoryData || [];
+        
+        console.log(`📦 Found ${inventoryItems.length} inventory items`);
+        
+        // Check if ANY item has stock > 0
+        const hasStock = inventoryItems.some(item => {
+            const currentStock = parseFloat(item.currentStock || item.stock || 0);
+            return currentStock > 0;
+        });
+        
+        console.log(`📊 Has in-stock items: ${hasStock}`);
+        
+        return hasStock;
+    } catch (error) {
+        console.error('❌ Error checking inventory:', error);
+        return false;
+    }
+}
+
+// Update button disabled states based on inventory
+async function updateAddButtonStates() {
+    try {
+        console.log('🔘 Updating Add button states based on inventory...');
+        
+        const hasInStock = await checkIfAnyIngredientsInStock();
+        
+        // Get all add buttons
+        const addNewItemBtn = document.getElementById('addNewItem');
+        const addFirstItemBtn = document.getElementById('addFirstItemBtn');
+        const addFirstMenuBtn = document.getElementById('addFirstMenuBtn');
+        
+        const buttons = [addNewItemBtn, addFirstItemBtn, addFirstMenuBtn].filter(btn => btn !== null);
+        
+        if (hasInStock) {
+            // Enable buttons
+            console.log('✅ Enabling Add buttons - inventory has stock');
+            buttons.forEach(btn => {
+                btn.disabled = false;
+                btn.title = 'Click to add a new product';
+                btn.style.opacity = '1';
+                btn.style.cursor = 'pointer';
+            });
+        } else {
+            // Disable buttons
+            console.log('❌ Disabling Add buttons - all ingredients out of stock');
+            buttons.forEach(btn => {
+                btn.disabled = true;
+                btn.title = '⚠️ Cannot add products - All ingredients are out of stock. Please restock inventory.';
+                btn.style.opacity = '0.6';
+                btn.style.cursor = 'not-allowed';
+            });
+        }
+    } catch (error) {
+        console.error('❌ Error updating button states:', error);
+    }
+}
+
 function openAddModal() {
     if (isModalOpen) return;
+    
+    // Check if any ingredients are in stock
+    const hasInStockIngredients = checkIfAnyIngredientsInStock();
+    
+    if (!hasInStockIngredients) {
+        showToast('⚠️ Cannot add new product - All ingredients are out of stock. Please restock inventory first.', 'warning');
+        alert('Cannot add new product!\n\nAll required ingredients are out of stock.\n\nPlease restock the inventory before adding new menu items.');
+        return;
+    }
     
     isModalOpen = true;
     const modal = elements.itemModal;
@@ -1551,6 +2375,133 @@ function closeModal() {
     }
 }
 
+// ==================== AVAILABILITY CHECK FUNCTION ====================
+// Check if a menu item can be created/edited based on ingredient availability
+async function checkMenuItemAvailability(itemName) {
+    try {
+        console.log('═══════════════════════════════════════════════════');
+        console.log('🔵 AVAILABILITY CHECK STARTED for:', itemName);
+        console.log('═══════════════════════════════════════════════════');
+        
+        // Get the recipe mapping from inventory.js
+        // recipeMapping maps ingredients to menu items
+        // We need to find which ingredients this menu item requires
+        
+        // First, check if we have access to recipeMapping
+        let requiredIngredients = [];
+        
+        console.log('📋 recipeMapping available?', typeof recipeMapping !== 'undefined');
+        
+        // Look for the menu item in recipeMapping to find its required ingredients
+        if (typeof recipeMapping !== 'undefined' && recipeMapping) {
+            console.log('🔎 Searching recipeMapping for:', itemName);
+            for (const ingredient in recipeMapping) {
+                const menuItems = recipeMapping[ingredient];
+                if (menuItems.includes(itemName)) {
+                    console.log('  ✓ Found in:', ingredient);
+                    requiredIngredients.push(ingredient);
+                }
+            }
+        } else {
+            console.warn('⚠️ Recipe mapping not found. Availability check skipped.');
+            return { available: true, missingIngredients: [] };
+        }
+        
+        console.log('📦 Required ingredients:', requiredIngredients);
+        
+        if (requiredIngredients.length === 0) {
+            console.log(`✅ No recipe found for "${itemName}" - allowing creation (may be a packaging item)`);
+            return { available: true, missingIngredients: [] };
+        }
+        
+        console.log(`🔍 Checking ingredients for "${itemName}": ${requiredIngredients.join(', ')}`);
+        
+        // Fetch current inventory from API
+        console.log('📡 Fetching inventory from /api/inventory...');
+        const inventoryResponse = await fetch('/api/inventory', {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+            },
+            credentials: 'include'
+        });
+        
+        console.log('📡 Inventory API response status:', inventoryResponse.status);
+        
+        if (!inventoryResponse.ok) {
+            console.warn('⚠️ Could not fetch inventory data (status:', inventoryResponse.status, '). Allowing save with warning.');
+            return { available: true, missingIngredients: [] };
+        }
+        
+        const inventoryData = await inventoryResponse.json();
+        console.log('📦 Inventory data received:', inventoryData);
+        
+        const inventoryItems = inventoryData.data || inventoryData || [];
+        console.log('📊 Number of inventory items:', inventoryItems.length);
+        console.log('📋 Sample inventory item:', inventoryItems[0]);
+        
+        // Check if all required ingredients are in stock
+        const missingIngredients = [];
+        
+        requiredIngredients.forEach(ingredient => {
+            console.log(`\n  🔍 Checking ingredient: "${ingredient}"`);
+            
+            const inventoryItem = inventoryItems.find(item => {
+                const nameMatch = item.itemName === ingredient || 
+                                item.name === ingredient ||
+                                (item.name && item.name.toLowerCase() === ingredient.toLowerCase());
+                
+                console.log(`    Comparing with: "${item.itemName || item.name}" → Match: ${nameMatch}`);
+                return nameMatch;
+            });
+            
+            console.log(`    Found item:`, inventoryItem ? 'YES' : 'NO');
+            
+            if (inventoryItem) {
+                const stock = inventoryItem.currentStock !== undefined ? inventoryItem.currentStock : (inventoryItem.stock || 0);
+                console.log(`    Stock level: ${stock}`);
+            }
+            
+            // Check if item doesn't exist OR if stock is 0 or less
+            const currentStock = inventoryItem ? (inventoryItem.currentStock !== undefined ? parseFloat(inventoryItem.currentStock) : parseFloat(inventoryItem.stock || 0)) : 0;
+            
+            if (!inventoryItem || currentStock <= 0) {
+                console.log(`    ❌ MISSING: ${ingredient} (Stock: ${currentStock})`);
+                missingIngredients.push(ingredient);
+            } else {
+                console.log(`    ✅ IN STOCK: ${ingredient} (Stock: ${currentStock})`);
+            }
+        });
+        
+        console.log('\n📋 Missing ingredients:', missingIngredients);
+        
+        if (missingIngredients.length > 0) {
+            console.warn(`❌ BLOCKED: Missing ingredients for "${itemName}": ${missingIngredients.join(', ')}`);
+            console.log('═══════════════════════════════════════════════════');
+            return { 
+                available: false, 
+                missingIngredients: missingIngredients
+            };
+        }
+        
+        console.log(`✅ ALLOWED: All ingredients available for "${itemName}"`);
+        console.log('═══════════════════════════════════════════════════');
+        return { 
+            available: true, 
+            missingIngredients: []
+        };
+        
+    } catch (error) {
+        console.error('❌ Error checking availability:', error);
+        console.error('Stack trace:', error.stack);
+        console.log('═══════════════════════════════════════════════════');
+        // On error, allow save but warn user
+        showToast('Warning: Could not verify ingredient availability. Proceeding with caution.', 'warning');
+        return { available: true, missingIngredients: [] };
+    }
+}
+
 // ==================== FIXED SAVE FUNCTION ====================
 async function handleSaveItem() {
     console.log('handleSaveItem called');
@@ -1660,6 +2611,29 @@ async function handleSaveItem() {
         showToast('Current stock cannot be negative', 'error');
         if (elements.currentStock) elements.currentStock.focus();
         return;
+    }
+    
+    // ==================== CHECK INGREDIENT AVAILABILITY ====================
+    // Only check on NEW items (not edits) to prevent admin from creating items without ingredients
+    if (!formData.itemId || formData.itemId.trim() === '') {
+        console.log('🔍 New menu item - checking ingredient availability...');
+        const availabilityCheck = await checkMenuItemAvailability(formData.itemName);
+        
+        if (!availabilityCheck.available) {
+            console.error('❌ Cannot create menu item - missing ingredients:', availabilityCheck.missingIngredients);
+            
+            const missingIngredientsList = availabilityCheck.missingIngredients.join('\n  • ');
+            const errorMsg = `Cannot add "${formData.itemName}" - Missing ingredients:\n  • ${missingIngredientsList}\n\nPlease restock the missing ingredients first.`;
+            
+            showToast(`Cannot add "${formData.itemName}" - Missing ingredients: ${availabilityCheck.missingIngredients.join(', ')}`, 'error');
+            
+            // Optional: Show more detailed alert
+            alert(errorMsg);
+            return;
+        }
+        console.log('✅ All ingredients available - proceeding with save');
+    } else {
+        console.log('📝 Editing existing item - skipping ingredient availability check');
     }
     
     await saveMenuItem(formData);
@@ -1951,9 +2925,6 @@ async function initializeSendStockUI() {
         renderSendStockTable();
         attachSendStockEventListeners();
         
-        // Load pending stock requests
-        loadPendingStockRequests();
-        
         console.log('✅ Send Stock UI initialized');
         
     } catch (error) {
@@ -1992,7 +2963,6 @@ async function initializeSendStockUI() {
         console.log('✅ Fallback data loaded with', stocksData.length, 'items');
         renderSendStockTable();
         attachSendStockEventListeners();
-        loadPendingStockRequests();
     }
 }
 
@@ -2010,135 +2980,50 @@ async function loadPendingStockRequests() {
         if (response.ok) {
             const data = await response.json();
             const requests = data.data || [];
-            displayPendingRequests(requests);
+            
+            // Add notifications for pending requests
+            requests.forEach(req => {
+                // Check if notification already exists
+                const exists = notifications.some(n => 
+                    n.type === 'stock_request' && 
+                    n.data && n.data._id === req._id
+                );
+                
+                if (!exists) {
+                    const notification = {
+                        id: Date.now() + Math.random(),
+                        productName: req.productName,
+                        message: `📦 Staff requested ${req.requestedQuantity} ${req.unit} of ${req.productName} (${req.priority} priority)`,
+                        timestamp: new Date(req.requestDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                        date: new Date(req.requestDate).toLocaleDateString(),
+                        read: false,
+                        type: 'stock_request',
+                        priority: req.priority,
+                        data: req
+                    };
+                    
+                    notifications.unshift(notification);
+                    hasNewNotifications = true;
+                    updateNotificationBadge();
+                }
+            });
+            
+            renderNotifications();
         }
     } catch (error) {
         console.error('Error loading pending stock requests:', error);
     }
 }
 
-// Display pending stock requests
-function displayPendingRequests(requests) {
-    const section = document.getElementById('pendingRequestsSection');
-    const list = document.getElementById('pendingRequestsList');
-    const count = document.getElementById('requestCount');
-    
-    if (!section || !list) return;
-    
-    // Show/hide section based on requests
-    if (requests.length === 0) {
-        section.style.display = 'none';
-        return;
-    }
-    
-    section.style.display = 'block';
-    count.textContent = requests.length;
-    
-    list.innerHTML = requests.map(req => {
-        const priorityClass = `priority-${req.priority || 'medium'}`;
-        const requestDate = new Date(req.requestDate).toLocaleDateString();
-        
-        return `
-            <div class="pending-request-card">
-                <div class="pending-request-info">
-                    <h4>${req.productName}</h4>
-                    <div class="pending-request-details">
-                        <div class="pending-request-detail-item">
-                            <strong>${req.requestedQuantity}</strong>&nbsp;${req.unit}
-                        </div>
-                        <div class="pending-request-detail-item">
-                            <span class="priority-badge ${priorityClass}">${req.priority ? req.priority.toUpperCase() : 'MEDIUM'}</span>
-                        </div>
-                        <div class="pending-request-detail-item">
-                            📅 ${requestDate}
-                        </div>
-                    </div>
-                </div>
-                <div class="request-actions">
-                    <button class="request-action-btn fulfill" onclick="fulfillStockRequest('${req._id}', '${req.productName}', ${req.requestedQuantity}, '${req.unit}')">
-                        ✓ Fulfill
-                    </button>
-                    <button class="request-action-btn dismiss" onclick="dismissStockRequest('${req._id}')">
-                        ✕ Dismiss
-                    </button>
-                </div>
-            </div>
-        `;
-    }).join('');
-}
-
-// Fulfill stock request
-function fulfillStockRequest(requestId, productName, quantity, unit) {
-    // Auto-fill the send stock form with the request details
-    const product = stocksData.find(p => p.name === productName);
-    
-    if (product) {
-        // Pre-select the product in send stock section
-        alert(`Fulfilling request for ${productName}: ${quantity} ${unit}\n\nYou can now update the quantity and send stock.`);
-        
-        // Optionally, update the quantity control for this product
-        const quantityInput = document.getElementById(`quantity-${product.id}`);
-        if (quantityInput) {
-            quantityInput.value = Math.max(0, product.quantity - quantity);
-            updateQuantity(product.id, quantityInput.value);
-        }
-        
-        // Mark request as fulfilled
-        updateStockRequestStatus(requestId, 'fulfilled');
-    }
-}
-
-// Dismiss stock request
-async function dismissStockRequest(requestId) {
-    if (!confirm('Are you sure you want to dismiss this request?')) {
-        return;
-    }
-    
-    try {
-        const response = await fetch(`${BACKEND_URL}/api/stock-requests/${requestId}`, {
-            method: 'DELETE',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            credentials: 'include'
-        });
-        
-        if (response.ok) {
-            showToast('Stock request dismissed', 'success');
-            loadPendingStockRequests();
-        }
-    } catch (error) {
-        console.error('Error dismissing request:', error);
-        showToast('Failed to dismiss request', 'error');
-    }
-}
-
-// Update stock request status
-async function updateStockRequestStatus(requestId, newStatus) {
-    try {
-        const response = await fetch(`${BACKEND_URL}/api/stock-requests/${requestId}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            credentials: 'include',
-            body: JSON.stringify({ status: newStatus })
-        });
-        
-        if (response.ok) {
-            loadPendingStockRequests();
-        }
-    } catch (error) {
-        console.error('Error updating request status:', error);
-    }
-}
-
 // Render Send Stock Table
 function renderSendStockTable() {
     const tableBody = document.getElementById('tableBody');
-    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+    if (!tableBody) return;
+    
+    const searchTerm = document.getElementById('searchInput')?.value.toLowerCase() || '';
     const activeFilter = document.querySelector('.filter-btn.active');
-    const activeFilterValue = activeFilter ? activeFilter.getAttribute('onclick').match(/'([^']+)'/)[1] : 'all';
+    const activeFilterValue = activeFilter ? activeFilter.getAttribute('onclick')?.match(/'([^']+)'/) : null;
+    const filterValue = activeFilterValue ? activeFilterValue[1] : 'all';
     
     let filteredData = stocksData;
     
@@ -2152,14 +3037,14 @@ function renderSendStockTable() {
     }
     
     // Apply category filter
-    if (activeFilterValue !== 'all') {
+    if (filterValue !== 'all') {
         filteredData = filteredData.filter(item => {
             // Check if item category matches the filter (exact match)
-            if (item.category === activeFilterValue) return true;
+            if (item.category === filterValue) return true;
             
             // Also check if the display name matches (for abbreviated categories)
             const displayName = categoryDisplayNames[item.category];
-            if (displayName === activeFilterValue) return true;
+            if (displayName === filterValue) return true;
             
             return false;
         });
@@ -2216,8 +3101,11 @@ function renderSendStockTable() {
     });
     
     // Update footer
-    document.getElementById('totalItems').textContent = filteredData.length;
-    document.getElementById('lastUpdated').textContent = new Date().toLocaleTimeString();
+    const totalItems = document.getElementById('totalItems');
+    const lastUpdated = document.getElementById('lastUpdated');
+    
+    if (totalItems) totalItems.textContent = filteredData.length;
+    if (lastUpdated) lastUpdated.textContent = new Date().toLocaleTimeString();
 }
 
 // Attach Send Stock Event Listeners
@@ -2356,8 +3244,5 @@ window.saveAllChanges = saveAllChanges;
 window.sendStockBatch = sendStockBatch;
 window.sendStock = sendStock;
 window.loadPendingStockRequests = loadPendingStockRequests;
-window.fulfillStockRequest = fulfillStockRequest;
-window.dismissStockRequest = dismissStockRequest;
-window.updateStockRequestStatus = updateStockRequestStatus;
 
 console.log('✅ Menu Management System loaded successfully');

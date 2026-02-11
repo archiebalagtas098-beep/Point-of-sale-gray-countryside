@@ -401,6 +401,12 @@ body {
     justify-content: center;
 }
 
+.btn:disabled,
+.btn[disabled] {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
 .btn-primary {
     background: #4e8a6a;
     color: white;
@@ -410,6 +416,19 @@ body {
 .btn-primary:hover {
     background: #3d6e54;
     transform: translateY(-1px);
+}
+
+.btn-primary:disabled,
+.btn-primary[disabled] {
+    background: #ccc;
+    color: #666;
+    border: 1px solid #999;
+}
+
+.btn-primary:disabled:hover,
+.btn-primary[disabled]:hover {
+    background: #ccc;
+    transform: none;
 }
 
 .btn-secondary {

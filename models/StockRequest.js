@@ -4,7 +4,7 @@ const stockRequestSchema = new mongoose.Schema({
   productId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Product',
-    required: true
+    required: false  // Changed to optional to support temporary IDs from fallback mode
   },
   productName: {
     type: String,

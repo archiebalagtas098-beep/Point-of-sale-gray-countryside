@@ -239,6 +239,7 @@ async function loadUserDataWithRetry(maxRetries) {
 async function loadUserData() {
   try {
     console.log('Attempting to load user data...');
+    console.log('Current user token status:', document.cookie);
     
     // Try multiple endpoints including the new one
     const endpoints = [
@@ -266,13 +267,18 @@ async function loadUserData() {
           cache: 'no-cache'
         });
         
+        console.log(`Response status for ${endpoint}:`, response.status, response.statusText);
+        
         if (response.ok) {
           successfulEndpoint = endpoint;
-          console.log(`Success with endpoint: ${endpoint}`);
+          console.log(`✅ Success with endpoint: ${endpoint}`);
           break;
+        } else {
+          const errorText = await response.text();
+          console.warn(`❌ Endpoint ${endpoint} returned status ${response.status}:`, errorText);
         }
       } catch (error) {
-        console.warn(`Endpoint ${endpoint} failed:`, error.message);
+        console.warn(`Endpoint ${endpoint} failed with error:`, error.message);
         continue;
       }
     }
@@ -282,7 +288,7 @@ async function loadUserData() {
     }
 
     const result = await response.json();
-    console.log('User data loaded:', result);
+    console.log('✅ User data loaded:', result);
     
     // Handle different response structures
     let userData;
@@ -808,7 +814,15 @@ function populateUserData() {
     if (elements.fullNameDisplay) elements.fullNameDisplay.value = currentUser.fullName || '';
     if (elements.emailDisplay) elements.emailDisplay.value = currentUser.email || '';
     if (elements.phoneDisplay) elements.phoneDisplay.value = currentUser.phoneNumber || '';
-    if (elements.usernameDisplay) elements.usernameDisplay.textContent = currentUser.username || '';
+    if (elements.usernameDisplay) {
+        // Set as value for input field
+        if (elements.usernameDisplay.tagName === 'INPUT') {
+            elements.usernameDisplay.value = currentUser.username || '';
+        } else {
+            // Or as text content for display element
+            elements.usernameDisplay.textContent = currentUser.username || '';
+        }
+    }
 }
 
 // Show placeholder data when user data cannot be loaded
@@ -816,7 +830,14 @@ function showPlaceholderData() {
     if (elements.fullNameDisplay) elements.fullNameDisplay.value = 'User Name';
     if (elements.emailDisplay) elements.emailDisplay.value = 'user@example.com';
     if (elements.phoneDisplay) elements.phoneDisplay.value = '';
-    if (elements.usernameDisplay) elements.usernameDisplay.textContent = 'guest';
+    if (elements.usernameDisplay) {
+        if (elements.usernameDisplay.tagName === 'INPUT') {
+            elements.usernameDisplay.value = 'guest';
+            elements.usernameDisplay.disabled = true;
+        } else {
+            elements.usernameDisplay.textContent = 'guest';
+        }
+    }
 }
 
 // Update auto-save status indicator

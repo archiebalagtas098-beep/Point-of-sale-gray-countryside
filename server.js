@@ -715,31 +715,50 @@ app.use('/api/staff', verifyToken);
 
 // ==================== MENU MANAGEMENT ROUTES ====================
 
-// GET all menu items
+// GET all menu items with inventory availability check
 app.get('/api/menu', verifyToken, async (req, res) => {
     try {
-        console.log('📋 API: Fetching all menu items...');
+        console.log('📋 API: Fetching all menu items with inventory check...');
         const menuItems = await MenuItem.find({}).lean();
         
-        const formattedItems = menuItems.map(item => ({
-            _id: item._id,
-            itemId: item._id.toString(),
-            name: item.itemName || item.name,
-            itemName: item.itemName || item.name,
-            category: item.category,
-            price: item.price,
-            currentStock: item.currentStock || 0,
-            minStock: item.minStock || 0,
-            maxStock: item.maxStock || 0,
-            unit: item.unit,
-            image: item.image,
-            isActive: item.isActive !== false,
-            itemType: item.itemType || 'finished'
+        const formattedItems = await Promise.all(menuItems.map(async (item) => {
+            // Check if required ingredients are available
+            const availability = await RecipeManager.checkProductAvailability(item.itemName || item.name);
+            
+            return {
+                _id: item._id,
+                itemId: item._id.toString(),
+                name: item.itemName || item.name,
+                itemName: item.itemName || item.name,
+                category: item.category,
+                price: item.price,
+                currentStock: item.currentStock || 0,
+                minStock: item.minStock || 0,
+                maxStock: item.maxStock || 0,
+                unit: item.unit,
+                image: item.image,
+                isActive: item.isActive !== false && availability.available,
+                status: availability.available ? 'available' : 'out_of_stock',
+                itemType: item.itemType || 'finished',
+                requiredIngredients: availability.requiredIngredients || [],
+                missingIngredients: availability.missingIngredients || [],
+                availableIngredients: availability.availableIngredients || []
+            };
         }));
+        
+        const availableCount = formattedItems.filter(i => i.status === 'available').length;
+        const outOfStockCount = formattedItems.filter(i => i.status === 'out_of_stock').length;
+        
+        console.log(`✅ Menu items loaded: ${availableCount} available, ${outOfStockCount} out of stock`);
         
         res.json({
             success: true,
-            data: formattedItems
+            data: formattedItems,
+            stats: {
+                total: formattedItems.length,
+                available: availableCount,
+                outOfStock: outOfStockCount
+            }
         });
     } catch (error) {
         console.error('❌ Error fetching menu items:', error);
@@ -764,6 +783,9 @@ app.get('/api/menu/:itemId', verifyToken, async (req, res) => {
             });
         }
         
+        // Check availability
+        const availability = await RecipeManager.checkProductAvailability(menuItem.itemName || menuItem.name);
+        
         const formatted = {
             _id: menuItem._id,
             itemId: menuItem._id.toString(),
@@ -776,8 +798,11 @@ app.get('/api/menu/:itemId', verifyToken, async (req, res) => {
             maxStock: menuItem.maxStock || 0,
             unit: menuItem.unit,
             image: menuItem.image,
-            isActive: menuItem.isActive !== false,
-            itemType: menuItem.itemType || 'finished'
+            isActive: menuItem.isActive !== false && availability.available,
+            status: availability.available ? 'available' : 'out_of_stock',
+            itemType: menuItem.itemType || 'finished',
+            requiredIngredients: availability.requiredIngredients || [],
+            missingIngredients: availability.missingIngredients || []
         };
         
         res.json({
@@ -789,6 +814,32 @@ app.get('/api/menu/:itemId', verifyToken, async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Error fetching menu item',
+            error: error.message
+        });
+    }
+});
+
+// CHECK menu item availability
+app.get('/api/menu/:itemName/availability', verifyToken, async (req, res) => {
+    try {
+        const itemName = decodeURIComponent(req.params.itemName);
+        console.log(`📋 API: Checking availability for "${itemName}"...`);
+        
+        const availability = await RecipeManager.checkProductAvailability(itemName);
+        
+        res.json({
+            success: true,
+            itemName: itemName,
+            available: availability.available,
+            requiredIngredients: availability.requiredIngredients || [],
+            missingIngredients: availability.missingIngredients || [],
+            availableIngredients: availability.availableIngredients || []
+        });
+    } catch (error) {
+        console.error('❌ Error checking menu item availability:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error checking availability',
             error: error.message
         });
     }
@@ -1145,6 +1196,42 @@ app.get("/api/inventory/status", verifyToken, verifyAdmin, async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Failed to fetch inventory status'
+        });
+    }
+});
+
+// ==================== GET ALL INVENTORY ITEMS (For Menu Management Availability Check) ====================
+// Returns ALL inventory items - used by menu management to check ingredient availability
+app.get("/api/inventory", verifyToken, async (req, res) => {
+    try {
+        console.log('📦 API: /api/inventory - Fetching ALL inventory items for availability check...');
+        
+        // Get ALL inventory items (no filter, no limit)
+        const inventoryItems = await InventoryItem.find()
+            .sort({ itemName: 1 })
+            .lean();
+        
+        console.log(`📦 Inventory API returning ${inventoryItems.length} items`);
+        
+        // Log first few items for debugging
+        if (inventoryItems.length > 0) {
+            console.log('   Sample items:');
+            inventoryItems.slice(0, 3).forEach(item => {
+                console.log(`   - ${item.itemName}: stock=${item.currentStock}`);
+            });
+        }
+        
+        res.json({
+            success: true,
+            data: inventoryItems,
+            count: inventoryItems.length
+        });
+    } catch (error) {
+        console.error('❌ Error fetching inventory:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch inventory',
+            error: error.message
         });
     }
 });
@@ -1835,6 +1922,10 @@ app.put('/api/inventory/:itemId', verifyToken, verifyAdmin, async (req, res) => 
             isLowStock: parsedCurrentStock > 0 && parsedCurrentStock <= parsedMinStock
         });
         
+        // Update related menu items based on inventory availability
+        console.log(`🍽️ Checking affected menu items for "${itemName}"...`);
+        await RecipeManager.updateRelatedMenuItems(itemName);
+        
         res.json({
             success: true,
             message: 'Inventory item updated successfully',
@@ -2110,6 +2201,40 @@ app.get("/admindashboard/menumanagement", verifyToken, verifyAdmin, async (req, 
             categories: [],
             stats: DashboardStats.getDefaultStats(),
             businessInfo: BUSINESS_INFO
+        });
+    }
+});
+
+// ==================== INFOSETTINGS API ENDPOINT ====================
+// Get current user data for settings page
+app.get('/api/infosettings/user', verifyToken, async (req, res) => {
+    try {
+        const user = await User.findById(req.user._id).select('-password');
+        
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+        
+        res.json({
+            success: true,
+            data: {
+                _id: user._id,
+                username: user.username,
+                email: user.email,
+                fullName: user.fullName || user.username,
+                phone: user.phone || '',
+                role: user.role,
+                createdAt: user.createdAt
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching user data:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error fetching user data'
         });
     }
 });
@@ -2432,10 +2557,68 @@ app.post("/api/stock-requests", verifyToken, async (req, res) => {
             });
         }
         
+        let finalProductId = productId;
+        
+        // If productId is a temporary ID (starts with 'temp_'), try to find the real product by name
+        if (!mongoose.Types.ObjectId.isValid(productId)) {
+            console.log(`⚠️ Temporary ID detected: ${productId}. Attempting to find product by name: ${productName}`);
+            
+            // Try to find the product in the Product collection by name
+            const existingProduct = await Product.findOne({ name: productName });
+            
+            if (existingProduct) {
+                finalProductId = existingProduct._id;
+                console.log(`✅ Found product in database: ${productName} with ID: ${finalProductId}`);
+            } else {
+                console.log(`⚠️ Product not found in database: ${productName}. Creating stock request with product name only.`);
+                // Create stock request without productId reference - will use productName as reference
+                const stockRequest = new StockRequest({
+                    productId: null,  // No reference ID, will use productName
+                    productName: productName,
+                    requestedQuantity: requestedQuantity,
+                    unit: unit || 'units',
+                    priority: priority || 'medium',
+                    requestedBy: requestedBy || 'staff',
+                    status: status || 'pending',
+                    requestDate: new Date()
+                });
+                
+                // Update schema to allow null productId for fallback mode
+                await stockRequest.save();
+                
+                console.log(`✅ Stock request created (fallback mode): ${productName} x${requestedQuantity}`);
+                
+                // Broadcast notification
+                const notification = {
+                    type: 'stock_request',
+                    title: `📦 Stock Request from Staff`,
+                    message: `Staff requested ${requestedQuantity} ${unit} of ${productName}`,
+                    productName: productName,
+                    requestedQuantity: requestedQuantity,
+                    unit: unit,
+                    priority: priority,
+                    status: 'pending',
+                    requestId: stockRequest._id,
+                    timestamp: new Date(),
+                    data: stockRequest
+                };
+                
+                RealTimeManager.broadcastToAdmins(notification);
+                console.log(`📢 Notification broadcasted: Stock request for ${productName}`);
+                
+                return res.status(201).json({
+                    success: true,
+                    message: "Stock request submitted successfully",
+                    data: stockRequest
+                });
+            }
+        }
+        
+        // Create stock request with valid productId
         const stockRequest = new StockRequest({
-            productId,
-            productName,
-            requestedQuantity,
+            productId: finalProductId,
+            productName: productName,
+            requestedQuantity: requestedQuantity,
             unit: unit || 'units',
             priority: priority || 'medium',
             requestedBy: requestedBy || 'staff',

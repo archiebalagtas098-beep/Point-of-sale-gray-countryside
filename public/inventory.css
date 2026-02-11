@@ -1092,3 +1092,374 @@ body {
 #totalInventory.count-updating {
     animation: countUpdate 0.5s ease-in-out;
 }
+
+/* ==================== MODAL STYLES - Matching Inventory Cards ==================== */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 9999;
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-content {
+    background: white;
+    width: 90%;
+    max-width: 650px;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    animation: modalSlideIn 0.3s ease;
+    border: 1px solid #e0e0e0;
+}
+
+.modal-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid #e0e0e0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: white;
+    border-radius: 12px 12px 0 0;
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #333;
+}
+
+.close {
+    color: #666;
+    font-size: 24px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: color 0.2s;
+    line-height: 1;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+}
+
+.close:hover {
+    background-color: #f5f5f5;
+    color: #333;
+}
+
+.modal-body {
+    padding: 24px;
+}
+
+/* ==================== FORM STYLES - Matching Card Design ==================== */
+#itemForm {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.form-group.full-width {
+    grid-column: span 2;
+}
+
+.form-group label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.form-control {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    color: #333;
+    background-color: white;
+    transition: all 0.2s;
+    box-sizing: border-box;
+}
+
+.form-control:hover {
+    border-color: #999;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: #4CAF50;
+    box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+}
+
+/* Dropdown styling - matching your select style */
+select.form-control {
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 16px;
+    padding-right: 40px;
+}
+
+/* ==================== STOCK FIELDS - Matching Inventory Card Stock Controls ==================== */
+.stock-field {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 4px;
+}
+
+.stock-field .form-control {
+    border: none;
+    padding: 8px 12px;
+    flex: 1;
+}
+
+.stock-field .form-control:focus {
+    box-shadow: none;
+    border: none;
+}
+
+.stock-field span {
+    color: #666;
+    font-size: 0.9rem;
+    padding-right: 12px;
+    min-width: 50px;
+}
+
+/* Matching the + and - buttons from your inventory cards */
+.stock-btn {
+    padding: 8px 16px;
+    background: #f5f5f5;
+    color: #333;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 600;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 40px;
+}
+
+.stock-btn.decrease {
+    background: #ff6b6b;
+    color: white;
+}
+
+.stock-btn.decrease:hover {
+    background: #ff5252;
+}
+
+.stock-btn.increase {
+    background: #4CAF50;
+    color: white;
+}
+
+.stock-btn.increase:hover {
+    background: #45a049;
+}
+
+.stock-value {
+    min-width: 60px;
+    text-align: center;
+    font-weight: 600;
+    color: #333;
+    padding: 0 8px;
+}
+
+/* ==================== CATEGORY BADGE - Matching Inventory Card ==================== */
+.category-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    background: #f0f0f0;
+    color: #666;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 4px;
+}
+
+/* ==================== STATUS BADGE - Matching Inventory Card ==================== */
+.status-badge {
+    display: inline-block;
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 12px;
+}
+
+.status-badge.status-good {
+    background: #e8f5e9;
+    color: #2e7d32;
+}
+
+.status-badge.status-low {
+    background: #fff3e0;
+    color: #f57c00;
+}
+
+.status-badge.status-out {
+    background: #ffebee;
+    color: #c62828;
+}
+
+/* ==================== TEXTAREA - Matching Card Style ==================== */
+textarea.form-control {
+    resize: vertical;
+    min-height: 100px;
+    font-family: inherit;
+    line-height: 1.5;
+}
+
+textarea.form-control::placeholder {
+    color: #999;
+    font-style: normal;
+}
+
+/* ==================== RECIPE INFO - Matching Recipe Usage Display ==================== */
+#recipeInfo {
+    margin-top: 16px;
+    padding: 16px;
+    background: #f9f9f9;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    color: #333;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+#recipeInfo strong {
+    color: #4CAF50;
+    font-weight: 600;
+}
+
+/* ==================== FORM ACTIONS - Matching Card Footer ==================== */
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid #e0e0e0;
+}
+
+.btn {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-primary {
+    background: #4CAF50;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #45a049;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(76, 175, 80, 0.2);
+}
+
+.btn-secondary {
+    background: #f5f5f5;
+    color: #666;
+    border: 1px solid #e0e0e0;
+}
+
+.btn-secondary:hover {
+    background: #eeeeee;
+    color: #333;
+}
+
+/* ==================== DESCRIPTION TEXT - Matching Card ==================== */
+.description {
+    margin-top: 12px;
+    padding: 12px;
+    background: #f9f9f9;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    color: #666;
+    border-left: 3px solid #4CAF50;
+}
+
+/* ==================== ANIMATIONS ==================== */
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ==================== RESPONSIVE ==================== */
+@media (max-width: 768px) {
+    .modal-content {
+        width: 95%;
+        margin: 20px;
+    }
+    
+    .form-row {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+    
+    .form-group.full-width {
+        grid-column: span 1;
+    }
+    
+    .stock-field {
+        flex-wrap: wrap;
+    }
+    
+    .form-actions {
+        flex-direction: column;
+    }
+    
+    .btn {
+        width: 100%;
+        justify-content: center;
+    }
+}

@@ -120,18 +120,324 @@ const validRawIngredients = {
     'Napkins': 'packaging'
 };
 
+// ==================== COMPLETE RECIPE MAPPING ====================
+// Maps each RAW INGREDIENT to all MENU ITEMS that use it
+// When ingredient stock = 0, ALL listed menu items become UNAVAILABLE
+
 const recipeMapping = {
-    'Chicken': ['Fried Chicken', 'Buttered Chicken', 'Chicken Adobo'],
-    'Pork slices': ['Pork Adobo', 'Sizzling Pork', 'Pork Sinigang'],
-    'Pork belly': ['Lechon Kawali', 'Bagnet'],
-    'Eggs': ['Fried Rice', 'Omelette', 'Scrambled Eggs'],
-    'Garlic': ['Garlic Rice', 'Most Dishes'],
-    'Onion': ['Most Dishes'],
-    'Soy sauce': ['Adobo', 'Stir Fry', 'Marinade'],
-    'Cooking oil': ['All Fried Dishes'],
-    'Butter': ['Buttered Chicken', 'Garlic Bread'],
-    'Milk': ['Milkshakes', 'Coffee'],
-    'Sugar': ['Desserts', 'Beverages']
+    // ===== MEAT & POULTRY =====
+    'Chicken': [
+        'Fried Chicken',
+        'Buttered Honey Chicken',
+        'Buttered Spicy Chicken',
+        'Chicken Adobo',
+        'Sizzling Fried Chicken'
+    ],
+    
+    'Pork slices': [
+        'Korean Spicy Bulgogi (Pork)',
+        'Korean Salt and Pepper (Pork)',
+        'Pork Adobo',
+        'Sizzling Pork'
+    ],
+    
+    'Pork belly': [
+        'Crisky Pork Lechon Kawali',
+        'Sizzling Liempo'
+    ],
+    
+    'Pork ribs': [
+        'Sizzling Porkchop'
+    ],
+    
+    'Ground pork': [
+        'Pork Shanghai'
+    ],
+    
+    // ===== SEAFOOD =====
+    'Cream dory fillet': [
+        'Cream Dory Fish Fillet',
+        'Fish and Fries'
+    ],
+    
+    'Shrimp': [
+        'Sinigang (Shrimp)',
+        'Buttered Shrimp'
+    ],
+    
+    // ===== VEGETABLES & HERBS =====
+    'Garlic': [
+        'Korean Spicy Bulgogi (Pork)',
+        'Korean Salt and Pepper (Pork)',
+        'Crisky Pork Lechon Kawali',
+        'Sizzling Liempo',
+        'Sizzling Porkchop',
+        'Sizzling Pork Sisig',
+        'Sizzling Fried Chicken',
+        'Pork Shanghai',
+        'Pork Adobo',
+        'Chicken Adobo',
+        'Sinigang (PORK)',
+        'Sinigang (Shrimp)',
+        'Paknet (Pakbet w/ Bagnet)',
+        'Special Bulalo (good for 2-3 Persons)',
+        'Special Bulalo Buy 1 Take 1 (good for 6-8 Persons)',
+        'Pancit Bihon (S)',
+        'Pancit Bihon (M)',
+        'Pancit Bihon (L)',
+        'Pancit Canton (S)',
+        'Pancit Canton (M)',
+        'Pancit Canton (L)',
+        'Spaghetti (S)',
+        'Spaghetti (M)',
+        'Spaghetti (L)'
+    ],
+    
+    'Onion': [
+        'Korean Spicy Bulgogi (Pork)',
+        'Korean Salt and Pepper (Pork)',
+        'Crisky Pork Lechon Kawali',
+        'Pork Adobo',
+        'Sizzling Pork Sisig',
+        'Chicken Adobo',
+        'Sinigang (PORK)',
+        'Sinigang (Shrimp)',
+        'Paknet (Pakbet w/ Bagnet)',
+        'Special Bulalo (good for 2-3 Persons)',
+        'Special Bulalo Buy 1 Take 1 (good for 6-8 Persons)',
+        'Fried Rice',
+        'Pancit Bihon (S)',
+        'Pancit Bihon (M)',
+        'Pancit Bihon (L)',
+        'Pancit Canton (S)',
+        'Pancit Canton (M)',
+        'Pancit Canton (L)',
+        'Spaghetti (S)',
+        'Spaghetti (M)',
+        'Spaghetti (L)'
+    ],
+    
+    'Tomato': [
+        'Pork Adobo',
+        'Chicken Adobo',
+        'Sinigang (PORK)',
+        'Sinigang (Shrimp)',
+        'Paknet (Pakbet w/ Bagnet)'
+    ],
+    
+    // ===== PANTRY STAPLES =====
+    'Soy sauce': [
+        'Korean Spicy Bulgogi (Pork)',
+        'Korean Salt and Pepper (Pork)',
+        'Pork Adobo',
+        'Chicken Adobo',
+        'Sizzling Pork Sisig',
+        'Pancit Bihon (S)',
+        'Pancit Bihon (M)',
+        'Pancit Bihon (L)',
+        'Pancit Canton (S)',
+        'Pancit Canton (M)',
+        'Pancit Canton (L)',
+        'Spaghetti (S)',
+        'Spaghetti (M)',
+        'Spaghetti (L)',
+        'Fried Rice'
+    ],
+    
+    'Cooking oil': [
+        'Fried Chicken',
+        'Buttered Honey Chicken',
+        'Buttered Spicy Chicken',
+        'Sizzling Fried Chicken',
+        'Sizzling Pork Sisig',
+        'Sizzling Liempo',
+        'Sizzling Porkchop',
+        'Crisky Pork Lechon Kawali',
+        'French fries',
+        'Fish and Fries',
+        'Cheesy Dynamite Lumpia',
+        'Lumpiang Shanghai',
+        'Fried Rice',
+        'Cheesy Nachos',
+        'Nachos Supreme'
+    ],
+    
+    'Salt': [
+        'Korean Spicy Bulgogi (Pork)',
+        'Korean Salt and Pepper (Pork)',
+        'Pork Adobo',
+        'Chicken Adobo',
+        'Fried Chicken',
+        'Buttered Honey Chicken',
+        'Buttered Spicy Chicken',
+        'Sizzling Fried Chicken',
+        'Sizzling Pork Sisig',
+        'Sizzling Liempo',
+        'Sizzling Porkchop',
+        'Crisky Pork Lechon Kawali',
+        'Cream Dory Fish Fillet',
+        'Fish and Fries',
+        'Sinigang (PORK)',
+        'Sinigang (Shrimp)',
+        'Paknet (Pakbet w/ Bagnet)',
+        'Buttered Shrimp',
+        'Special Bulalo (good for 2-3 Persons)',
+        'Special Bulalo Buy 1 Take 1 (good for 6-8 Persons)',
+        'Fried Rice',
+        'Plain Rice',
+        'Pancit Bihon (S)',
+        'Pancit Bihon (M)',
+        'Pancit Bihon (L)',
+        'Pancit Canton (S)',
+        'Pancit Canton (M)',
+        'Pancit Canton (L)',
+        'Spaghetti (S)',
+        'Spaghetti (M)',
+        'Spaghetti (L)'
+    ],
+    
+    'Black pepper': [
+        'Korean Spicy Bulgogi (Pork)',
+        'Korean Salt and Pepper (Pork)',
+        'Sizzling Pork Sisig',
+        'Fried Chicken',
+        'Sinigang (PORK)',
+        'Sinigang (Shrimp)',
+        'Paknet (Pakbet w/ Bagnet)',
+        'Buttered Shrimp'
+    ],
+    
+    'Sugar': [
+        'Korean Spicy Bulgogi (Pork)',
+        'Pork Adobo',
+        'Chicken Adobo',
+        'Sizzling Pork Sisig',
+        'Cucumber Lemonade (Glass)',
+        'Cucumber Lemonade (Pitcher)',
+        'Blue Lemonade (Glass)',
+        'Blue Lemonade (Pitcher)',
+        'Red Tea (Glass)',
+        'Matcha Green Tea HC',
+        'Matcha Green Tea MC',
+        'Milk Tea Regular HC',
+        'Milk Tea Regular MC'
+    ],
+    
+    // ===== DAIRY & EGGS =====
+    'Eggs': [
+        'Fried Rice',
+        'Omelette',
+        'Scrambled Eggs'
+    ],
+    
+    'Butter': [
+        'Buttered Honey Chicken',
+        'Buttered Spicy Chicken',
+        'Buttered Shrimp',
+        'Garlic Bread'
+    ],
+    
+    'Milk': [
+        'Milk Tea Regular HC',
+        'Milk Tea Regular MC',
+        'Cafe Americano Tall',
+        'Cafe Americano Grande',
+        'Cafe Latte Tall',
+        'Cafe Latte Grande',
+        'Caramel Macchiato Tall',
+        'Caramel Macchiato Grande',
+        'Matcha Green Tea HC',
+        'Matcha Green Tea MC',
+        'Cookies & Cream HC',
+        'Cookies & Cream MC',
+        'Strawberry & Cream HC',
+        'Mango cheese cake HC'
+    ],
+    
+    'Cheese': [
+        'Cheesy Nachos',
+        'Nachos Supreme',
+        'Cheesy Dynamite Lumpia'
+    ],
+    
+    // ===== BEVERAGES =====
+    'Coke': [
+        'Soda (Mismo)',
+        'Soda 1.5L'
+    ],
+    
+    'Sprite': [
+        'Soda (Mismo)',
+        'Soda 1.5L'
+    ],
+    
+    // ===== PACKAGING (These prevent items if out of stock) =====
+    'Paper cups': [
+        'Cafe Americano Tall',
+        'Cafe Americano Grande',
+        'Cafe Latte Tall',
+        'Cafe Latte Grande',
+        'Caramel Macchiato Tall',
+        'Caramel Macchiato Grande',
+        'Milk Tea Regular HC',
+        'Milk Tea Regular MC',
+        'Matcha Green Tea HC',
+        'Matcha Green Tea MC',
+        'Cookies & Cream HC',
+        'Cookies & Cream MC',
+        'Strawberry & Cream HC',
+        'Mango cheese cake HC',
+        'Cucumber Lemonade (Glass)',
+        'Blue Lemonade (Glass)',
+        'Red Tea (Glass)'
+    ],
+    
+    'Straws': [
+        'Milk Tea Regular HC',
+        'Milk Tea Regular MC',
+        'Matcha Green Tea HC',
+        'Matcha Green Tea MC',
+        'Cookies & Cream HC',
+        'Cookies & Cream MC',
+        'Strawberry & Cream HC',
+        'Mango cheese cake HC',
+        'Cucumber Lemonade (Glass)',
+        'Cucumber Lemonade (Pitcher)',
+        'Blue Lemonade (Glass)',
+        'Blue Lemonade (Pitcher)',
+        'Red Tea (Glass)'
+    ],
+    
+    'Napkins': [
+        'Korean Spicy Bulgogi (Pork)',
+        'Korean Salt and Pepper (Pork)',
+        'Crisky Pork Lechon Kawali',
+        'Cream Dory Fish Fillet',
+        'Buttered Honey Chicken',
+        'Buttered Spicy Chicken',
+        'Chicken Adobo',
+        'Pork Shanghai',
+        'Sizzling Pork Sisig',
+        'Sizzling Liempo',
+        'Sizzling Porkchop',
+        'Sizzling Fried Chicken',
+        'Cheesy Nachos',
+        'Nachos Supreme',
+        'French fries',
+        'Clubhouse Sandwich',
+        'Fish and Fries',
+        'Cheesy Dynamite Lumpia',
+        'Lumpiang Shanghai',
+        'Fried Chicken',
+        'Tinapa Rice',
+        'Tuyo Pesto',
+        'Sinigang (PORK)',
+        'Sinigang (Shrimp)',
+        'Paknet (Pakbet w/ Bagnet)',
+        'Buttered Shrimp',
+        'Special Bulalo (good for 2-3 Persons)',
+        'Special Bulalo Buy 1 Take 1 (good for 6-8 Persons)'
+    ]
 };
 
 // ==================== IN STOCK FUNCTIONS ====================
@@ -472,7 +778,8 @@ function renderDashboardGrid() {
         const isLowStock = currentStock > 0 && currentStock <= minStock;
         const percentage = maxStock > 0 ? Math.min(100, (currentStock / maxStock) * 100) : 0;
         
-        const affectedDishes = recipeMapping[item.itemName] ? recipeMapping[item.itemName].length : 0;
+        // Get recipe usage info - show 0 if out of stock
+        const recipeInfo = isOutOfStock ? { usedInCount: 0, notUsedInCount: 0 } : getRecipeUsageInfo(item.itemName);
         
         return `
             <div class="dashboard-card ${isOutOfStock ? 'out-of-stock' : isLowStock ? 'low-stock' : 'in-stock'}">
@@ -483,15 +790,6 @@ function renderDashboardGrid() {
                     </span>
                 </div>
                 <div class="card-body">
-                    <div class="stock-info">
-                        <div class="stock-bar">
-                            <div class="stock-bar-fill" style="width: ${percentage}%; background-color: ${isOutOfStock ? '#dc3545' : isLowStock ? '#ffc107' : '#28a745'};"></div>
-                        </div>
-                        <div class="stock-numbers">
-                            <span>${currentStock}${unit}</span>
-                            <span>/ ${maxStock}${unit}</span>
-                        </div>
-                    </div>
                     <div class="card-details">
                         <div class="detail">
                             <span class="label">Min:</span>
@@ -503,10 +801,14 @@ function renderDashboardGrid() {
                                 ${isOutOfStock ? 'Out of Stock' : isLowStock ? 'Low Stock' : 'In Stock'}
                             </span>
                         </div>
-                        ${affectedDishes > 0 ? `
                         <div class="detail">
-                            <span class="label">Used in:</span>
-                            <span class="value">${affectedDishes} dish${affectedDishes !== 1 ? 'es' : ''}</span>
+                            <span class="label">Can Be Made:</span>
+                            <span class="value ${isOutOfStock ? 'text-danger' : '#333'}">${recipeInfo.usedInCount} dish${recipeInfo.usedInCount !== 1 ? 'es' : ''}</span>
+                        </div>
+                        ${isOutOfStock ? `
+                        <div class="detail">
+                            <span class="label">Cannot Be Made:</span>
+                            <span class="value">${recipeInfo.notUsedInCount} dish${recipeInfo.notUsedInCount !== 1 ? 'es' : ''}</span>
                         </div>
                         ` : ''}
                     </div>
@@ -545,6 +847,9 @@ function renderInventoryGrid() {
         const isLowStock = currentStock > 0 && currentStock <= minStock;
         const categoryLabel = getCategoryLabel(item.category || getCategoryFromName(item.itemName));
         
+        // Get recipe usage info - show 0 if out of stock
+        const recipeInfo = isOutOfStock ? { usedInCount: 0, notUsedInCount: 0 } : getRecipeUsageInfo(item.itemName);
+        
         return `
             <div class="inventory-card ${isOutOfStock ? 'out-of-stock' : isLowStock ? 'low-stock' : 'in-stock'}">
                 <div class="card-header">
@@ -560,9 +865,13 @@ function renderInventoryGrid() {
                     <div class="stock-levels">
                         <div class="stock-item">
                             <span class="label">Current:</span>
-                            <span class="value ${isOutOfStock ? 'text-danger' : isLowStock ? 'text-warning' : 'text-success'}">
-                                ${currentStock} ${unit}
-                            </span>
+                            <div style="display: flex; align-items: center; gap: 8px; margin-top: 5px;">
+                                <button class="btn-decrease" onclick="decreaseStock('${item._id || item.id}', '${item.itemName}')" style="padding: 5px 10px; background: #ff6b6b; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; font-weight: bold;">−</button>
+                                <span class="value ${isOutOfStock ? 'text-danger' : isLowStock ? 'text-warning' : 'text-success'}" style="min-width: 60px; text-align: center;">
+                                    ${currentStock} ${unit}
+                                </span>
+                                <button class="btn-increase" onclick="increaseStock('${item._id || item.id}', '${item.itemName}')" style="padding: 5px 10px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; font-weight: bold;">+</button>
+                            </div>
                         </div>
                         <div class="stock-item">
                             <span class="label">Min:</span>
@@ -577,6 +886,22 @@ function renderInventoryGrid() {
                         ${isOutOfStock ? 'Out of Stock' : isLowStock ? 'Low Stock' : 'In Stock'}
                     </div>
                     ${item.description ? `<div class="description">📝 ${item.description}</div>` : ''}
+                    
+                    <!-- Recipe Usage Display -->
+                    <div class="recipe-usage-info" style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e0e0e0;">
+                        <div style="display: flex; gap: 15px; font-size: 13px;">
+                            <div style="flex: 1;">
+                                <span style="color: ${isOutOfStock ? '#dc3545' : '#666'}; font-weight: 500;">Can Be Made:</span>
+                                <strong style="color: ${isOutOfStock ? '#dc3545' : '#333'};">${recipeInfo.usedInCount} dish${recipeInfo.usedInCount !== 1 ? 'es' : ''}</strong>
+                            </div>
+                            ${isOutOfStock ? `
+                            <div style="flex: 1;">
+                                <span style="color: #666; font-weight: 500;">Cannot Be Made:</span>
+                                <strong style="color: #333;">${recipeInfo.notUsedInCount} dish${recipeInfo.notUsedInCount !== 1 ? 'es' : ''}</strong>
+                            </div>
+                            ` : ''}
+                        </div>
+                    </div>
                 </div>
             </div>
         `;
@@ -605,6 +930,9 @@ function renderFilteredInventoryGrid(filteredItems) {
         const isOutOfStock = currentStock === 0;
         const isLowStock = currentStock > 0 && currentStock <= minStock;
         
+        // Get recipe usage info - show 0 if out of stock
+        const recipeInfo = isOutOfStock ? { usedInCount: 0, notUsedInCount: 0 } : getRecipeUsageInfo(item.itemName);
+        
         return `
             <div class="inventory-card ${isOutOfStock ? 'out-of-stock' : isLowStock ? 'low-stock' : 'in-stock'}">
                 <div class="card-header">
@@ -626,9 +954,15 @@ function renderFilteredInventoryGrid(filteredItems) {
                             ${isOutOfStock ? 'Out of Stock' : isLowStock ? 'Low Stock' : 'In Stock'}
                         </span>
                     </div>
+                    <div class="card-info" style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #e0e0e0;">
+                        <div style="display: flex; gap: 10px; font-size: 12px;">
+                            <span style="color: ${isOutOfStock ? '#dc3545' : '#666'};">Can Be Made: <strong>${recipeInfo.usedInCount} dish${recipeInfo.usedInCount !== 1 ? 'es' : ''}</strong></span>
+                            ${isOutOfStock ? `<span style="color: #666;">Cannot Be Made: <strong>${recipeInfo.notUsedInCount} dish${recipeInfo.notUsedInCount !== 1 ? 'es' : ''}</strong></span>` : ''}
+                        </div>
+                    </div>
                 </div>
             </div>
-        `;
+        `; 
     }).join('');
 }
 
@@ -657,6 +991,9 @@ function renderFilteredDashboardGrid(filteredItems) {
         const isLowStock = currentStock > 0 && currentStock <= minStock;
         const percentage = maxStock > 0 ? Math.min(100, (currentStock / maxStock) * 100) : 0;
         
+        // Get recipe usage info - show 0 if out of stock
+        const recipeInfo = isOutOfStock ? { usedInCount: 0, notUsedInCount: 0 } : getRecipeUsageInfo(item.itemName);
+        
         return `
             <div class="dashboard-card ${isOutOfStock ? 'out-of-stock' : isLowStock ? 'low-stock' : 'in-stock'}">
                 <div class="card-header">
@@ -670,10 +1007,21 @@ function renderFilteredDashboardGrid(filteredItems) {
                         <div class="stock-bar">
                             <div class="stock-bar-fill" style="width: ${percentage}%; background-color: ${isOutOfStock ? '#dc3545' : isLowStock ? '#ffc107' : '#28a745'};"></div>
                         </div>
-                        <div class="stock-numbers">
-                            <span>${currentStock}${unit}</span>
-                            <span>/ ${maxStock}${unit}</span>
+                        <div class="stock-numbers" style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px;">
+                            <button class="btn-decrease" onclick="decreaseStock('${item._id || item.id}', '${item.itemName}')" style="padding: 5px 10px; background: #ff6b6b; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: bold;">−</button>
+                            <span style="min-width: 80px; text-align: center; font-weight: 600;">${currentStock} ${unit}</span>
+                            <button class="btn-increase" onclick="increaseStock('${item._id || item.id}', '${item.itemName}')" style="padding: 5px 10px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: bold;">+</button>
                         </div>
+                    </div>
+                    <div class="card-details">
+                        <div class="detail">
+                            <span class="label">Can Be Made:</span>
+                            <span class="value">${recipeInfo.usedInCount} dish${recipeInfo.usedInCount !== 1 ? 'es' : ''}</span>
+                        </div>
+                        ${isOutOfStock ? `<div class="detail">
+                            <span class="label">Cannot Be Made:</span>
+                            <span class="value">${recipeInfo.notUsedInCount} dish${recipeInfo.notUsedInCount !== 1 ? 'es' : ''}</span>
+                        </div>` : ''}
                     </div>
                 </div>
                 <div class="card-footer">
@@ -764,6 +1112,71 @@ function showRecipeInfo(itemName) {
     } else {
         elements.recipeInfo.style.display = 'none';
     }
+}
+
+// ==================== RECIPE USAGE HELPER FUNCTION ====================
+// Optimized: Compute how many dishes can be made based on recipeMapping and allInventoryItems.
+// A dish can be made ONLY if all required ingredients have currentStock > 0.
+function getRecipeUsageInfo(itemName) {
+    // Check if THIS ingredient is in stock
+    const thisIngredient = allInventoryItems.find(inv => inv.itemName === itemName);
+    const thisStock = thisIngredient ? parseFloat(thisIngredient.currentStock || 0) : 0;
+    
+    // If THIS ingredient is out of stock, show 0 for both
+    if (thisStock <= 0) {
+        return {
+            usedInCount: 0,
+            notUsedInCount: 0,
+            totalDishes: 0
+        };
+    }
+    
+    // Get all menu items that use this ingredient
+    const usedInDishes = recipeMapping[itemName] || [];
+    
+    // OPTIMIZATION 1: Build a stock lookup map to avoid repeated .find() calls
+    const stockMap = new Map();
+    allInventoryItems.forEach(item => {
+        stockMap.set(item.itemName, parseFloat(item.currentStock || 0));
+    });
+    
+    // OPTIMIZATION 2: Build reverse mapping (dish → ingredients) once
+    const dishToIngredients = new Map();
+    for (const ingredient in recipeMapping) {
+        recipeMapping[ingredient].forEach(dish => {
+            if (!dishToIngredients.has(dish)) {
+                dishToIngredients.set(dish, []);
+            }
+            dishToIngredients.get(dish).push(ingredient);
+        });
+    }
+    
+    // OPTIMIZATION 3: Count dishes that CAN be made (without nested loops)
+    let canBeMadeCount = 0;
+    
+    usedInDishes.forEach(dish => {
+        // Get required ingredients for this dish (from pre-built map)
+        const requiredIngredients = dishToIngredients.get(dish) || [];
+        
+        // Check if ALL required ingredients are in stock (stock > 0)
+        const canBeMade = requiredIngredients.every(ingredient => {
+            const stock = stockMap.get(ingredient) || 0;
+            return stock > 0;
+        });
+        
+        if (canBeMade) {
+            canBeMadeCount++;
+        }
+    });
+    
+    // Calculate how many dishes that use this ingredient CANNOT be made
+    const cannotBeMadeCount = usedInDishes.length - canBeMadeCount;
+    
+    return {
+        usedInCount: canBeMadeCount,           // Dishes that USE THIS INGREDIENT and CAN be made
+        notUsedInCount: cannotBeMadeCount,     // Dishes that USE THIS INGREDIENT but CANNOT be made
+        totalDishes: usedInDishes.length
+    };
 }
 
 function isLowStock(item) {
@@ -1336,6 +1749,80 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // ==================== EXPORT FUNCTIONS TO GLOBAL SCOPE ====================
 
+// ==================== INCREASE/DECREASE STOCK ====================
+
+async function increaseStock(itemId, itemName) {
+    const item = allInventoryItems.find(i => i._id === itemId || i.id === itemId);
+    if (!item) {
+        showToast('Item not found', 'error');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`${BACKEND_URL}/api/inventory/${itemId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+                currentStock: parseFloat(item.currentStock) + 1
+            })
+        });
+        
+        if (response.ok) {
+            // Update locally and re-render
+            item.currentStock = parseFloat(item.currentStock) + 1;
+            showToast(`✅ Stock increased for ${itemName}`, 'success');
+            renderInventoryGrid();
+            renderDashboardGrid();
+            updateDashboardStats();
+        } else {
+            showToast('Failed to update stock', 'error');
+        }
+    } catch (error) {
+        console.error('Error increasing stock:', error);
+        showToast('Error updating stock', 'error');
+    }
+}
+
+async function decreaseStock(itemId, itemName) {
+    const item = allInventoryItems.find(i => i._id === itemId || i.id === itemId);
+    if (!item) {
+        showToast('Item not found', 'error');
+        return;
+    }
+    
+    const currentStock = parseFloat(item.currentStock) || 0;
+    if (currentStock <= 0) {
+        showToast('Cannot reduce below 0', 'error');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`${BACKEND_URL}/api/inventory/${itemId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+                currentStock: currentStock - 1
+            })
+        });
+        
+        if (response.ok) {
+            // Update locally and re-render
+            item.currentStock = currentStock - 1;
+            showToast(`✅ Stock reduced for ${itemName}`, 'success');
+            renderInventoryGrid();
+            renderDashboardGrid();
+            updateDashboardStats();
+        } else {
+            showToast('Failed to update stock', 'error');
+        }
+    } catch (error) {
+        console.error('Error decreasing stock:', error);
+        showToast('Error updating stock', 'error');
+    }
+}
+
 window.updateDashboardStats = updateDashboardStats;
 window.openEditModal = openEditModal;
 window.filterByCategory = filterByCategory;
@@ -1354,3 +1841,5 @@ window.hideLoading = hideLoading;
 window.getInStockCount = getInStockCount;
 window.getInStockItems = getInStockItems;
 window.autoFillItemFromCategory = autoFillItemFromCategory;
+window.increaseStock = increaseStock;
+window.decreaseStock = decreaseStock;

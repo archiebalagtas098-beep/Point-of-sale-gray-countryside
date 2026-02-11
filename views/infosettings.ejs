@@ -18,7 +18,7 @@
                 <h2>Gray Countryside Cafe</h2>
             </div>
             <div class="logout-container">
-                <button onclick="handleLogout()">Logout</button>
+                <button onclick="handleLogout()" id="logoutBtn">Logout</button>
             </div>
         </nav>
 
@@ -54,6 +54,10 @@
         <div class="info-item">
             <label>Full Name</label>
             <input type="text" class="info-value" id="fullNameDisplay" placeholder="Your full name">
+        </div>
+        <div class="info-item">
+            <label>Username</label>
+            <input type="text" class="info-value" id="usernameDisplay" placeholder="Your username" readonly>
         </div>
         <div class="info-item">
             <label>Email Address</label>
@@ -95,7 +99,7 @@
                                     <button type="button" class="btn btn-secondary" id="cancelPasswordChangeBtn">
                                         <i class="fas fa-times"></i> Cancel
                                     </button>
-                                    <button type="submit" class="btn btn-primary" id="changePasswordBtn">
+                                    <button type="submit" class="btn btn-primary" id="passwordChangeBtn">
                                         <i class="fas fa-check"></i>Change Password
                                     </button>
                                 </div>

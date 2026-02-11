@@ -1064,6 +1064,9 @@ function updateSalesReportDisplay(oldData = null) {
         fadeInElement(marginEl, 800);
     }
     
+    // Update Revenue Breakdown sections with animation
+    updateRevenueBreakdown();
+    
     // Update graph status
     const graphStatusEl = document.getElementById('graphStatus');
     if (graphStatusEl) {
@@ -1080,6 +1083,94 @@ function updateSalesReportDisplay(oldData = null) {
     
     // Update sales summary table with animation
     updateSalesTable();
+}
+
+// ==================== REVENUE BREAKDOWN FUNCTION ====================
+function updateRevenueBreakdown() {
+    // Define category colors for donut visualization
+    const categoryColors = {
+        'Rice': '#3b82f6',           // Blue
+        'Sizzling': '#ef4444',       // Red
+        'Coffee': '#f59e0b',         // Amber
+        'Drink': '#10b981'           // Green
+    };
+    
+    // Get today's date
+    const today = new Date();
+    const dateStr = today.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    
+    // Sample categories for the revenue breakdown
+    // In a real app, this would come from actual sales data grouped by category
+    const categories = [
+        { name: 'Rice', label: 'Rice Bowl Meals', percentage: 0, amount: 0 },
+        { name: 'Sizzling', label: 'Hot Sizzlers', percentage: 0, amount: 0 },
+        { name: 'Coffee', label: 'Coffee', percentage: 0, amount: 0 },
+        { name: 'Drink', label: 'Milk Tea', percentage: 0, amount: 0 }
+    ];
+    
+    // Calculate revenue breakdown from sales data (if available from daily sales)
+    // For now, we'll show placeholders
+    const totalRevenue = salesData.totalRevenue || 0;
+    
+    // Update both Revenue Breakdown sections
+    updateBreakdownSection(1, dateStr, categories, totalRevenue);
+    updateBreakdownSection(2, dateStr, categories, totalRevenue);
+}
+
+function updateBreakdownSection(sectionNum, dateStr, categories, totalRevenue) {
+    // Update period
+    const periodEl = document.getElementById(`revenuePeriod${sectionNum}`);
+    if (periodEl) {
+        periodEl.textContent = dateStr;
+        fadeInElement(periodEl, 200);
+    }
+    
+    // Define actual category colors
+    const categoryColors = {
+        'Rice': '#3b82f6',           // Blue
+        'Sizzling': '#ef4444',       // Red
+        'Coffee': '#f59e0b',         // Amber
+        'Drink': '#10b981'           // Green
+    };
+    
+    // Update legend items with animation
+    categories.forEach((cat, index) => {
+        const delay = 300 + (index * 100);
+        
+        // Category name element
+        const nameEl = document.getElementById(`cat${sectionNum}_name${index + 1}`);
+        if (nameEl) {
+            nameEl.textContent = cat.label;
+            fadeInElement(nameEl, delay);
+        }
+        
+        // Category percentage element
+        const percentEl = document.getElementById(`cat${sectionNum}_percent${index + 1}`);
+        if (percentEl) {
+            const displayPercent = cat.percentage > 0 ? `${cat.percentage.toFixed(1)}%` : '0%';
+            percentEl.textContent = displayPercent;
+            percentEl.style.color = categoryColors[cat.name] || '#94a3b8';
+            fadeInElement(percentEl, delay + 50);
+        }
+        
+        // Update color indicator
+        const colorSquare = nameEl?.previousElementSibling;
+        if (colorSquare) {
+            colorSquare.style.backgroundColor = categoryColors[cat.name] || '#cbd5e1';
+            colorSquare.style.transition = 'background-color 0.3s ease';
+        }
+    });
+    
+    // Update footer note
+    const noteEl = document.getElementById(`revenueNote${sectionNum}`);
+    if (noteEl) {
+        if (totalRevenue > 0) {
+            noteEl.textContent = `Total Revenue: ₱${totalRevenue.toFixed(2)}`;
+        } else {
+            noteEl.textContent = 'No sales data available';
+        }
+        fadeInElement(noteEl, 700);
+    }
 }
 
 function updateSalesTable() {
