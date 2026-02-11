@@ -119,7 +119,7 @@
                                 <div class="stat-value" id="outOfStock">0</div>
                             
                             </div>
-                             <div class="stat-card in-stock-stat"> <!-- Added class for styling -->
+                             <div class="stat-card in-stock-stat">
                                 <div>In Stock</div>
                                 <h3>In Stock Items</h3>
                                 <div class="stat-value" id="inStock">0</div>
@@ -159,7 +159,7 @@
                     <div class="form-container">
                         <div class="form-grid">
                             
-                             <div class="form-group">
+                            <div class="form-group">
                                 <label for="itemCategories">Category</label>
                                 <select id="itemCategories" class="form-control" required>
                                     <option value="">Select Category</option>
@@ -178,56 +178,56 @@
                                 <select id="itemName" class="form-control" required>
                                     <option value="">Select Ingredient</option>
                                     <!-- Meat & Poultry (meat) -->
-                                    <option value="Pork slices">Pork slices</option>
-                                    <option value="Pork belly">Pork belly</option>
-                                    <option value="Chicken">Chicken</option>
-                                    <option value="Ground pork">Ground pork</option>
-                                    <option value="Beef shanks">Beef shanks</option>
-                                    <option value="Pork ribs">Pork ribs</option>
-                                    <option value="Bacon">Bacon</option>
-                                    <option value="Ham">Ham</option>
+                                    <option value="Pork slices" data-category="meat">Pork slices</option>
+                                    <option value="Pork belly" data-category="meat">Pork belly</option>
+                                    <option value="Chicken" data-category="meat">Chicken</option>
+                                    <option value="Ground pork" data-category="meat">Ground pork</option>
+                                    <option value="Beef shanks" data-category="meat">Beef shanks</option>
+                                    <option value="Pork ribs" data-category="meat">Pork ribs</option>
+                                    <option value="Bacon" data-category="meat">Bacon</option>
+                                    <option value="Ham" data-category="meat">Ham</option>
                                     
                                     <!-- Seafood (seafood) -->
-                                    <option value="Cream dory fillet">Cream dory fillet</option>
-                                    <option value="Shrimp">Shrimp</option>
-                                    <option value="Smoked fish">Smoked fish</option>
+                                    <option value="Cream dory fillet" data-category="seafood">Cream dory fillet</option>
+                                    <option value="Shrimp" data-category="seafood">Shrimp</option>
+                                    <option value="Smoked fish" data-category="seafood">Smoked fish</option>
                                     
                                     <!-- Dairy & Eggs (dairy) -->
-                                    <option value="Butter">Butter</option>
-                                    <option value="Eggs">Eggs</option>
-                                    <option value="Milk">Milk</option>
-                                    <option value="Cheese">Cheese</option>
+                                    <option value="Butter" data-category="dairy">Butter</option>
+                                    <option value="Eggs" data-category="dairy">Eggs</option>
+                                    <option value="Milk" data-category="dairy">Milk</option>
+                                    <option value="Cheese" data-category="dairy">Cheese</option>
                                     
                                     <!-- Vegetables & Fruits (produce) -->
-                                    <option value="Garlic">Garlic</option>
-                                    <option value="Onion">Onion</option>
-                                    <option value="Carrots">Carrots</option>
-                                    <option value="Cabbage">Cabbage</option>
-                                    <option value="Tomato">Tomato</option>
-                                    <option value="Lettuce">Lettuce</option>
-                                    <option value="Ginger">Ginger</option>
-                                    <option value="Calamansi">Calamansi</option>
+                                    <option value="Garlic" data-category="produce">Garlic</option>
+                                    <option value="Onion" data-category="produce">Onion</option>
+                                    <option value="Carrots" data-category="produce">Carrots</option>
+                                    <option value="Cabbage" data-category="produce">Cabbage</option>
+                                    <option value="Tomato" data-category="produce">Tomato</option>
+                                    <option value="Lettuce" data-category="produce">Lettuce</option>
+                                    <option value="Ginger" data-category="produce">Ginger</option>
+                                    <option value="Calamansi" data-category="produce">Calamansi</option>
                                     
                                     <!-- Dry Goods (dry) -->
-                                    <option value="Soy sauce">Soy sauce</option>
-                                    <option value="Brown sugar">Brown sugar</option>
-                                    <option value="Salt">Salt</option>
-                                    <option value="Black pepper">Black pepper</option>
-                                    <option value="Cooking oil">Cooking oil</option>
-                                    <option value="Flour">Flour</option>
-                                    <option value="Vinegar">Vinegar</option>
-                                    <option value="Sugar">Sugar</option>
-                                    <option value="Ice">Ice</option>
-                                    <option value="Water">Water</option>
+                                    <option value="Soy sauce" data-category="dry">Soy sauce</option>
+                                    <option value="Brown sugar" data-category="dry">Brown sugar</option>
+                                    <option value="Salt" data-category="dry">Salt</option>
+                                    <option value="Black pepper" data-category="dry">Black pepper</option>
+                                    <option value="Cooking oil" data-category="dry">Cooking oil</option>
+                                    <option value="Flour" data-category="dry">Flour</option>
+                                    <option value="Vinegar" data-category="dry">Vinegar</option>
+                                    <option value="Sugar" data-category="dry">Sugar</option>
+                                    <option value="Ice" data-category="dry">Ice</option>
+                                    <option value="Water" data-category="dry">Water</option>
                                     
                                     <!-- Beverages (beverage) -->
-                                    <option value="Sprite">Sprite</option>
-                                    <option value="Coke">Coke</option>
+                                    <option value="Sprite" data-category="beverage">Sprite</option>
+                                    <option value="Coke" data-category="beverage">Coke</option>
                                     
                                     <!-- Packaging (packaging) -->
-                                    <option value="Paper cups">Paper cups</option>
-                                    <option value="Straws">Straws</option>
-                                    <option value="Napkins">Napkins</option>
+                                    <option value="Paper cups" data-category="packaging">Paper cups</option>
+                                    <option value="Straws" data-category="packaging">Straws</option>
+                                    <option value="Napkins" data-category="packaging">Napkins</option>
                                 </select>
                             </div>
                            
@@ -250,36 +250,33 @@
                                     <option value="pieces">Pieces</option>
                                     <option value="packs">Packs</option>
                                     <option value="bottles">Bottles</option>
-                                </select>
-
-                                 
+                                </select> 
                             </div>
                             
-                           <div class="form-row">
-    <div class="form-group">
-        <label for="currentStock">Current Stock</label>
-        <input type="number" id="currentStock" name="currentStock" min="0" step="0.01" value="0" required>
-    </div>
-</div>
-<div class="form-row">
-    <div class="form-group">
-        <label for="minStock">Min Stock (Alert Level)</label>
-        <input type="number" id="minStock" name="minStock" min="0" step="0.01" value="10" required>
-    </div>
-    <div class="form-group">
-        <label for="maxStock">Max Stock (Capacity)</label>
-        <input type="number" id="maxStock" name="maxStock" min="0" step="0.01" value="50" required>
-    </div>
-</div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="currentStock">Current Stock</label>
+                                    <input type="number" id="currentStock" name="currentStock" min="0" step="0.01" value="0" required>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="minStock">Min Stock (Alert Level)</label>
+                                    <input type="number" id="minStock" name="minStock" min="0" step="0.01" value="10" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="maxStock">Max Stock (Capacity)</label>
+                                    <input type="number" id="maxStock" name="maxStock" min="0" step="0.01" value="50" required>
+                                </div>
+                            </div>
 
-<div class="form-row">
-    <div class="form-group">
-        <label for="description">Description (Optional)</label>
-        <textarea id="description" name="description" class="form-control" rows="3" placeholder="Add notes about this ingredient..."></textarea>
-    </div>
-</div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="description">Description (Optional)</label>
+                                    <textarea id="description" name="description" class="form-control" rows="3" placeholder="Add notes about this ingredient..."></textarea>
+                                </div>
+                            </div>
                             
-                          
                         </div>
                         <input type="hidden" id="itemId">
                     </div>
