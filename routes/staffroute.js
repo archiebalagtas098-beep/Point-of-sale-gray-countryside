@@ -1,6 +1,7 @@
 import express from 'express';
 import MenuItem from '../models/Menuitem.js';
 import StaffAssignment from '../models/staffassignModel.js';
+import InventoryItem from '../models/InventoryItem.js';
 
 const router = express.Router();
 
@@ -111,6 +112,164 @@ router.get('/available-items', async (req, res) => {
     } catch (error) {
         console.error('Error getting available items:', error);
         res.status(500).json({ success: false, message: 'Server error' });
+    }
+});
+
+// ==================== STAFF INVENTORY ENDPOINTS ====================
+// Get all staff inventory items
+router.get('/inventory', async (req, res) => {
+    try {
+        const inventoryItems = await InventoryItem.find({ itemType: 'finished' });
+        res.json({
+            success: true,
+            data: inventoryItems
+        });
+    } catch (error) {
+        console.error('Error fetching staff inventory:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Error fetching staff inventory',
+            error: error.message 
+        });
+    }
+});
+
+// Get single staff inventory item
+router.get('/inventory/:id', async (req, res) => {
+    try {
+        const item = await InventoryItem.findById(req.params.id);
+        if (!item) {
+            return res.status(404).json({ 
+                success: false, 
+                message: 'Inventory item not found' 
+            });
+        }
+        res.json({
+            success: true,
+            data: item
+        });
+    } catch (error) {
+        console.error('Error fetching staff inventory item:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Error fetching staff inventory item',
+            error: error.message 
+        });
+    }
+});
+
+// Create or add to staff inventory
+router.post('/inventory', async (req, res) => {
+    try {
+        const { itemName, name, category, unit, currentStock, minStock, maxStock, price, itemType, isActive, notes } = req.body;
+        
+        // Check if item already exists
+        const existingItem = await InventoryItem.findOne({ 
+            $or: [
+                { itemName: itemName || name },
+                { 'name': itemName || name }
+            ]
+        });
+        
+        if (existingItem) {
+            // Update existing item by adding to stock
+            existingItem.currentStock = (parseInt(existingItem.currentStock) || 0) + (parseInt(currentStock) || 0);
+            await existingItem.save();
+            return res.json({
+                success: true,
+                message: 'Staff inventory updated',
+                data: existingItem
+            });
+        }
+        
+        // Create new inventory item
+        const newItem = new InventoryItem({
+            itemName: itemName || name,
+            category: category,
+            currentStock: parseInt(currentStock) || 0,
+            minStock: parseInt(minStock) || 10,
+            maxStock: parseInt(maxStock) || 200,
+            unit: unit,
+            itemType: itemType || 'finished',
+            isActive: isActive !== false
+        });
+        
+        await newItem.save();
+        
+        res.json({
+            success: true,
+            message: 'Staff inventory item created',
+            data: newItem
+        });
+    } catch (error) {
+        console.error('Error creating staff inventory:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Error creating staff inventory',
+            error: error.message 
+        });
+    }
+});
+
+// Update staff inventory item
+router.put('/inventory/:id', async (req, res) => {
+    try {
+        const { currentStock, minStock, maxStock, isActive, notes } = req.body;
+        
+        const item = await InventoryItem.findById(req.params.id);
+        if (!item) {
+            return res.status(404).json({ 
+                success: false, 
+                message: 'Inventory item not found' 
+            });
+        }
+        
+        // Update fields
+        if (currentStock !== undefined) item.currentStock = parseInt(currentStock);
+        if (minStock !== undefined) item.minStock = parseInt(minStock);
+        if (maxStock !== undefined) item.maxStock = parseInt(maxStock);
+        if (isActive !== undefined) item.isActive = isActive;
+        
+        await item.save();
+        
+        res.json({
+            success: true,
+            message: 'Staff inventory updated',
+            data: item
+        });
+    } catch (error) {
+        console.error('Error updating staff inventory:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Error updating staff inventory',
+            error: error.message 
+        });
+    }
+});
+
+// Delete staff inventory item
+router.delete('/inventory/:id', async (req, res) => {
+    try {
+        const item = await InventoryItem.findByIdAndDelete(req.params.id);
+        if (!item) {
+            return res.status(404).json({ 
+                success: false, 
+                message: 'Inventory item not found' 
+            });
+        }
+        
+        res.json({
+            success: true,
+            message: 'Staff inventory item deleted',
+            data: item
+        });
+    } catch (error) {
+        console.error('Error deleting staff inventory:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Error deleting staff inventory',
+            error: error.message 
+        });
     }
 });
 

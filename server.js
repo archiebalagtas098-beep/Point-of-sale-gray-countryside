@@ -2875,6 +2875,36 @@ app.get('/', (req, res) => {
     res.redirect('/login');
 });
 
+// ==================== EMIT STOCK TRANSFER EVENT TO STAFF ====================
+app.post('/api/admin/emit-stock-transfer', async (req, res) => {
+    try {
+        const transferData = req.body;
+        console.log('📡 Emitting stock transfer event to staff:', transferData);
+        
+        // Emit event to all connected staff clients
+        if (global.staffEventSource && global.staffEventSource.emit) {
+            global.staffEventSource.emit('message', {
+                type: 'stock_transfer',
+                action: 'stock_received',
+                ...transferData
+            });
+        }
+        
+        // Also broadcast via WebSocket if you're using it
+        if (global.io) {
+            global.io.to('staff').emit('stock_transfer', transferData);
+        }
+        
+        // You can also store this in a notifications table
+        // await Notification.create({ ... });
+        
+        res.json({ success: true, message: 'Event emitted successfully' });
+    } catch (error) {
+        console.error('❌ Error emitting stock transfer event:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 // ==================== START SERVER ====================
 app.listen(CONFIG.SERVER_PORT, () => {
     console.log(`✅ Server is running at http://localhost:${CONFIG.SERVER_PORT}`);

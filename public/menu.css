@@ -451,6 +451,37 @@ body {
     background: #f0f0f0;
 }
 
+.reset-btn {
+    background: #ff9800;
+    color: white;
+    border: 1px solid #f57c00;
+    padding: 10px 16px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-width: auto;
+}
+
+.reset-btn:hover {
+    background: #f57c00;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(255, 152, 0, 0.3);
+}
+
+.reset-btn:active {
+    transform: translateY(0);
+}
+
+.reset-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
 /* STATS DASHBOARD */
 .stats-dashboard {
     display: grid;
