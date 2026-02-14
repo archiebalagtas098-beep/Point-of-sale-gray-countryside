@@ -2,13 +2,17 @@
 
 let salesData = {
     totalRevenue: 0,
+    grossSalesRevenue: 0,      // ✅ Total money from sales
+    netSalesRevenue: 0,        // ✅ Gross minus returns
+    costOfGoodsSold: 0,        // ✅ Cost to produce items sold
     totalOrders: 0,
     totalCustomers: 0,
     avgOrderValue: 0,
     grossProfit: 0,
     margin: 0,
     dailySales: [],
-    recentOrders: []
+    recentOrders: [],
+    salesReturns: 0            // ✅ Amount of returns/refunds
 };
 
 function formatCurrency(amount) {
@@ -959,19 +963,44 @@ async function loadSalesReport() {
         // Store old values for animation
         const oldData = { ...salesData };
         
-        // Update sales data
+        // ✅ FIX: Update with actual revenue calculations
         salesData.totalRevenue = stats.totalRevenue || 0;
+        
+        // Gross Sales Revenue = Total revenue received from sales
+        salesData.grossSalesRevenue = salesData.totalRevenue;
+        
+        // Sales Returns/Refunds (from stats if available)
+        salesData.salesReturns = stats.salesReturns || 0;
+        
+        // Net Sales Revenue = Gross Sales - Returns
+        salesData.netSalesRevenue = salesData.grossSalesRevenue - salesData.salesReturns;
+        
+        // Cost of Goods Sold = Average 35% of revenue (can be adjusted based on actual costs)
+        // In a real system, this would be calculated from inventory cost tracking
+        salesData.costOfGoodsSold = salesData.netSalesRevenue * 0.35;
+        
+        // Gross Profit = Net Sales - COGS
+        salesData.grossProfit = salesData.netSalesRevenue - salesData.costOfGoodsSold;
+        
+        // Margin % = (Gross Profit / Net Sales) * 100
+        salesData.margin = salesData.netSalesRevenue > 0 ? (salesData.grossProfit / salesData.netSalesRevenue) * 100 : 0;
+        
         salesData.totalOrders = stats.totalOrders || 0;
         salesData.totalCustomers = stats.totalCustomers || 0;
-        salesData.avgOrderValue = salesData.totalOrders > 0 ? salesData.totalRevenue / salesData.totalOrders : 0;
-        
-        // Calculate profit
-        salesData.grossProfit = salesData.totalRevenue * 0.30;
-        salesData.margin = salesData.totalRevenue > 0 ? (salesData.grossProfit / salesData.totalRevenue) * 100 : 0;
+        salesData.avgOrderValue = salesData.totalOrders > 0 ? salesData.netSalesRevenue / salesData.totalOrders : 0;
         
         if (stats.recentOrders && stats.recentOrders.length > 0) {
             salesData.recentOrders = stats.recentOrders;
         }
+        
+        console.log('✅ Calculated Sales Data:', {
+            Gross: `₱${salesData.grossSalesRevenue.toFixed(2)}`,
+            Returns: `₱${salesData.salesReturns.toFixed(2)}`,
+            Net: `₱${salesData.netSalesRevenue.toFixed(2)}`,
+            COGS: `₱${salesData.costOfGoodsSold.toFixed(2)}`,
+            Profit: `₱${salesData.grossProfit.toFixed(2)}`,
+            Margin: `${salesData.margin.toFixed(1)}%`
+        });
         
         // Remove loading animation
         loadingElements.forEach(el => {
@@ -1048,6 +1077,30 @@ function updateSalesReportDisplay(oldData = null) {
         fadeInElement(avgOrderEl, 600);
     }
     
+    // ✅ Update Gross Sales Revenue (Total money from sales)
+    const grossSalesEl = document.getElementById('grossSalesRevenue');
+    if (grossSalesEl) {
+        const startValue = oldData ? oldData.grossSalesRevenue : 0;
+        animateValue(grossSalesEl, startValue, salesData.grossSalesRevenue, 1000, '₱');
+        fadeInElement(grossSalesEl, 650);
+    }
+    
+    // ✅ Update Net Sales Revenue (Gross minus returns)
+    const netSalesEl = document.getElementById('netSalesRevenue');
+    if (netSalesEl) {
+        const startValue = oldData ? oldData.netSalesRevenue : 0;
+        animateValue(netSalesEl, startValue, salesData.netSalesRevenue, 1000, '₱');
+        fadeInElement(netSalesEl, 670);
+    }
+    
+    // ✅ Update Cost of Goods Sold
+    const cogsEl = document.getElementById('costOfGoodsSold');
+    if (cogsEl) {
+        const startValue = oldData ? oldData.costOfGoodsSold : 0;
+        animateValue(cogsEl, startValue, salesData.costOfGoodsSold, 1000, '₱');
+        fadeInElement(cogsEl, 690);
+    }
+    
     // Update gross profit with animation
     const grossProfitEl = document.getElementById('grossProfit');
     if (grossProfitEl) {
@@ -1099,8 +1152,7 @@ function updateRevenueBreakdown() {
     const today = new Date();
     const dateStr = today.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     
-    // Sample categories for the revenue breakdown
-    // In a real app, this would come from actual sales data grouped by category
+    // ✅ FIX: Calculate revenue breakdown from actual recent orders
     const categories = [
         { name: 'Rice', label: 'Rice Bowl Meals', percentage: 0, amount: 0 },
         { name: 'Sizzling', label: 'Hot Sizzlers', percentage: 0, amount: 0 },
@@ -1108,13 +1160,63 @@ function updateRevenueBreakdown() {
         { name: 'Drink', label: 'Milk Tea', percentage: 0, amount: 0 }
     ];
     
-    // Calculate revenue breakdown from sales data (if available from daily sales)
-    // For now, we'll show placeholders
-    const totalRevenue = salesData.totalRevenue || 0;
+    // ✅ FIX: Get real sales data by category from recent orders
+    if (salesData.recentOrders && salesData.recentOrders.length > 0) {
+        console.log('📦 Calculating revenue breakdown from orders:', salesData.recentOrders.length);
+        
+        // Sum revenue by category
+        const categoryRevenue = {
+            'Rice': 0,
+            'Sizzling': 0,
+            'Coffee': 0,
+            'Drink': 0
+        };
+        
+        salesData.recentOrders.forEach(order => {
+            if (order.items && Array.isArray(order.items)) {
+                order.items.forEach(item => {
+                    const category = item.category || item.itemCategory || 'Other';
+                    
+                    // Map category to display name
+                    let mappedCategory = 'Drink'; // Default
+                    if (category.includes('Rice')) mappedCategory = 'Rice';
+                    else if (category.includes('Sizzling') || category.includes('Sizzler')) mappedCategory = 'Sizzling';
+                    else if (category.includes('Coffee') || category.includes('Cafe')) mappedCategory = 'Coffee';
+                    else if (category.includes('Drink') || category.includes('Milk')) mappedCategory = 'Drink';
+                    
+                    const itemTotal = (item.price || 0) * (item.quantity || 1);
+                    categoryRevenue[mappedCategory] += itemTotal;
+                    
+                    console.log(`  Item: ${item.name || 'Unknown'} (${mappedCategory}) - ₱${itemTotal.toFixed(2)}`);
+                });
+            } else if (order.totalAmount) {
+                // If order doesn't have items breakdown, use category info
+                const category = order.category || 'Drink';
+                let mappedCategory = 'Drink';
+                if (category.includes('Rice')) mappedCategory = 'Rice';
+                else if (category.includes('Sizzling')) mappedCategory = 'Sizzling';
+                else if (category.includes('Coffee')) mappedCategory = 'Coffee';
+                else if (category.includes('Drink') || category.includes('Milk')) mappedCategory = 'Drink';
+                
+                categoryRevenue[mappedCategory] += order.totalAmount;
+                console.log(`  Order: ${mappedCategory} - ₱${order.totalAmount.toFixed(2)}`);
+            }
+        });
+        
+        // Calculate percentages based on total revenue
+        const totalRevenue = salesData.totalRevenue || 0;
+        console.log(`\n💰 Category Revenue Totals (Total: ₱${totalRevenue.toFixed(2)}):`);
+        
+        categories.forEach(cat => {
+            cat.amount = categoryRevenue[cat.name] || 0;
+            cat.percentage = totalRevenue > 0 ? (cat.amount / totalRevenue) * 100 : 0;
+            console.log(`  ${cat.label}: ₱${cat.amount.toFixed(2)} (${cat.percentage.toFixed(1)}%)`);
+        });
+    }
     
-    // Update both Revenue Breakdown sections
-    updateBreakdownSection(1, dateStr, categories, totalRevenue);
-    updateBreakdownSection(2, dateStr, categories, totalRevenue);
+    // Update both Revenue Breakdown sections with calculated data
+    updateBreakdownSection(1, dateStr, categories, salesData.totalRevenue);
+    updateBreakdownSection(2, dateStr, categories, salesData.totalRevenue);
 }
 
 function updateBreakdownSection(sectionNum, dateStr, categories, totalRevenue) {

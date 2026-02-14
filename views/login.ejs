@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="/style.css">
     <title>Login</title>
+    <script src="/script/session-manager.js"></script>
 </head>
 <body>
 <form action="/login" method="post">
@@ -41,6 +42,23 @@
     <h5>&copy; 2026 For School Purposes Only. All rights reserved.</h5>
 </footer>
 <script>
+// ==================== 🔐 CHECK IF ALREADY LOGGED IN ====================
+window.addEventListener('load', function() {
+    // Check if user has a valid session
+    const token = document.cookie.split('; ').find(row => row.startsWith('token='));
+    const role = sessionManager.getRole();
+    
+    if (token && role && sessionManager.isLoggedIn()) {
+        // User is already logged in with valid session
+        console.log('🔓 Active session found - redirecting to ' + role + ' interface');
+        window.location.href = sessionManager.getDashboardUrl();
+    } else if (token) {
+        // Token exists but no role in sessionStorage, let server verify
+        console.log('🔄 Token exists, verifying with server...');
+        window.location.href = '/';
+    }
+});
+
 function togglePassword() {
     const passwordInput = document.getElementById("password");
     const eyeIcon = document.getElementById("eyeIcon");
@@ -55,6 +73,19 @@ function togglePassword() {
         eyeIcon.alt = "Show password";
     }
 }
+
+// ==================== 🎯 HANDLE LOGOUT REDIRECT ====================
+document.addEventListener('DOMContentLoaded', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const fromLogout = urlParams.get('logout');
+    
+    if (fromLogout === 'true') {
+        console.log('✅ Logged out successfully');
+        sessionManager.clearSession();
+        // Clean up URL
+        window.history.replaceState({}, document.title, '/login');
+    }
+});
 </script>
 </body>
 </html>

@@ -1703,3 +1703,100 @@ body {
   margin-top: 2px;
 }
 
+/* ==================== 🎯 ALIGNMENT FIXES - NO STYLE CHANGES ====================*/
+/* These classes ensure proper alignment without modifying existing styles */
+
+.align-center {
+    text-align: center;
+}
+
+.align-left {
+    text-align: left;
+}
+
+.align-right {
+    text-align: right;
+}
+
+.flex-center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.flex-between {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.flex-start {
+    display: flex;
+    align-items: flex-start;
+}
+
+.flex-end {
+    display: flex;
+    align-items: flex-end;
+}
+
+.gap-5 { gap: 5px; }
+.gap-10 { gap: 10px; }
+.gap-15 { gap: 15px; }
+
+.w-100 { width: 100%; }
+.w-auto { width: auto; }
+
+.h-auto { height: auto; }
+
+.overflow-hidden { overflow: hidden; }
+.overflow-auto { overflow: auto; }
+
+.mt-5 { margin-top: 5px; }
+.mt-10 { margin-top: 10px; }
+
+.mb-5 { margin-bottom: 5px; }
+.mb-10 { margin-bottom: 10px; }
+
+.p-5 { padding: 5px; }
+.p-10 { padding: 10px; }
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+    .staffdashboard {
+        flex-direction: column;
+    }
+    
+    .sidebar {
+        width: 100%;
+        max-height: auto;
+    }
+    
+    .center {
+        flex: 1;
+    }
+    
+    .product {
+        width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    body {
+        font-size: 10px;
+    }
+    
+    .header-navbar {
+        height: 35px;
+        padding: 0 5px;
+    }
+    
+    .sidebar {
+        padding: 8px;
+    }
+    
+    .menu-grid {
+        grid-template-columns: repeat(auto-fit, minmax(60px, 1fr));
+        gap: 5px;
+    }
+}

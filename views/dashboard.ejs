@@ -4,7 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="stylesheet" href="/dashboard.css">
+<link rel="stylesheet" href="/mobile-responsive.css">
 <title>Admin Dashboard</title>
+<script src="/script/session-manager.js"></script>
+<script src="/script/back-button-prevention.js"></script>
 </head>
 <body>
 <!-- NAVBAR -->
@@ -733,9 +736,16 @@ document.addEventListener('DOMContentLoaded', function() {
             errorDiv.style.display = 'none';
         }
     }
+
+    // ==================== 🔐 STORE USER ROLE IN SESSION ====================
+    window.addEventListener('DOMContentLoaded', function() {
+        // Mark user as admin in sessionStorage so new windows know the role
+        sessionManager.setRole('admin');
+        console.log('✅ Admin interface loaded - sessionStorage updated');
+    });
 });
 
 </script>
-<!-- Load dashboard script -->
+<!-- Load session manager and dashboard script -->
 <script src="/script/dashboard.js"></script>
 

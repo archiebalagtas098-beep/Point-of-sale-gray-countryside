@@ -26,6 +26,7 @@ const staffAssignmentSchema = new mongoose.Schema({
     },
     notes: String
 }, {
+    collection: 'staffAssignments',
     timestamps: true
 });
 

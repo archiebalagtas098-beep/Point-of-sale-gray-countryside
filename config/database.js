@@ -1,17 +1,66 @@
 import mongoose from "mongoose";
 
 let isConnected = false;
+const MAX_RETRIES = 3;
+let retryCount = 0;
 
 export const connectDB = async () => {
-  if (isConnected) return;
+  if (isConnected) {
+    console.log("✅ Using existing database connection");
+    return;
+  }
   
   try {
-    await mongoose.connect(process.env.MONGODB_URI);
+    const mongoURI = process.env.MONGODB_URI;
+    
+    if (!mongoURI) {
+      throw new Error("❌ MONGODB_URI not defined in environment variables");
+    }
+    
+    console.log("🔄 Connecting to MongoDB Atlas...");
+    
+    const connection = await mongoose.connect(mongoURI, {
+      retryWrites: true,
+      w: "majority",
+      serverSelectionTimeoutMS: 10000,
+      socketTimeoutMS: 45000,
+      maxPoolSize: 10,
+      minPoolSize: 2,
+    });
+    
     isConnected = true;
-    console.log("Mongodb Atlas has been Connected Successfully");
+    retryCount = 0;
+    console.log("✅ MongoDB Atlas Connected Successfully");
+    console.log(`📊 Database: ${connection.connection.db.databaseName}`);
+    console.log(`🏠 Host: ${connection.connection.host}`);
+    
+    // Handle connection events
+    mongoose.connection.on("connected", () => {
+      console.log("✅ Mongoose connected to MongoDB");
+    });
+    
+    mongoose.connection.on("error", (err) => {
+      console.error("❌ Mongoose connection error:", err);
+      isConnected = false;
+    });
+    
+    mongoose.connection.on("disconnected", () => {
+      console.warn("⚠️ Mongoose disconnected from MongoDB");
+      isConnected = false;
+    });
+    
   } catch (error) {
-    console.error("DB Error:", error);
-    console.log("Mongodb Atlas connection error");
+    console.error("❌ MongoDB Connection Error:", error.message);
+    isConnected = false;
+    retryCount++;
+    
+    if (retryCount < MAX_RETRIES) {
+      console.log(`🔄 Retrying connection (${retryCount}/${MAX_RETRIES}) in 3 seconds...`);
+      setTimeout(() => connectDB(), 3000);
+    } else {
+      console.error("❌ Failed to connect after maximum retries");
+      process.exit(1);
+    }
   }
 };
 

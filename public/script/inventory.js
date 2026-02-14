@@ -8,6 +8,8 @@ function initializeElements() {
         modalTitle: document.getElementById('modalTitle'),
         itemForm: document.getElementById('itemForm'),
         closeModal: document.getElementById('closeModal'),
+        duplicateNotification: document.getElementById('duplicateNotification'),
+        duplicateIngredientName: document.getElementById('duplicateIngredientName'),
         
         // Form fields
         itemId: document.getElementById('itemId'),
@@ -67,57 +69,129 @@ const categoryUnitsMapping = {
 };
 
 const validRawIngredients = {
-    // Meat & Poultry
-    'Pork slices': 'meat',
+    // ==================== MEAT & POULTRY ====================
+    'Pork': 'meat',
     'Pork belly': 'meat',
-    'Chicken': 'meat',
+    'Pork chop': 'meat',
     'Ground pork': 'meat',
-    'Beef shanks': 'meat',
-    'Pork ribs': 'meat',
-    'Bacon': 'meat',
+    'Chicken': 'meat',
+    'Fried chicken': 'meat',
+    'Shrimp': 'meat',
+    'Fish fillet': 'meat',
+    'Cream dory': 'meat',
+    'Beef shank': 'meat',
+    'Bagnet': 'meat',
+    'Tinapa': 'meat',
+    'Tuyo': 'meat',
     'Ham': 'meat',
+    'Hotdog': 'meat',
     
-    // Seafood
-    'Cream dory fillet': 'seafood',
-    'Shrimp': 'seafood',
-    'Smoked fish': 'seafood',
+    // ==================== SEAFOOD ====================
+    'Fish': 'seafood',
     
-    // Dairy
-    'Butter': 'dairy',
-    'Eggs': 'dairy',
-    'Milk': 'dairy',
-    'Cheese': 'dairy',
-    
-    // Produce
+    // ==================== FRESH PRODUCE ====================
     'Garlic': 'produce',
     'Onion': 'produce',
-    'Carrots': 'produce',
+    'Carrot': 'produce',
     'Cabbage': 'produce',
     'Tomato': 'produce',
     'Lettuce': 'produce',
-    'Ginger': 'produce',
+    'Cucumber': 'produce',
+    'Lemon': 'produce',
+    'Bell pepper': 'produce',
     'Calamansi': 'produce',
+    'Chili': 'produce',
+    'Radish': 'produce',
+    'Kangkong': 'produce',
+    'Eggplant': 'produce',
+    'Squash': 'produce',
+    'Okra': 'produce',
+    'Ampalaya': 'produce',
+    'Corn': 'produce',
+    'Potato': 'produce',
+    'Bread': 'produce',
     
-    // Dry Goods
+    // ==================== DAIRY & EGGS ====================
+    'Butter': 'dairy',
+    'Egg': 'dairy',
+    'Milk': 'dairy',
+    'Cheese': 'dairy',
+    'Cream': 'dairy',
+    'Mayonnaise': 'dairy',
+    
+    // ==================== PANTRY STAPLES ====================
     'Soy sauce': 'dry',
-    'Brown sugar': 'dry',
+    'Vinegar': 'dry',
     'Salt': 'dry',
+    'Sugar': 'dry',
     'Black pepper': 'dry',
     'Cooking oil': 'dry',
+    'Sesame oil': 'dry',
     'Flour': 'dry',
-    'Vinegar': 'dry',
-    'Sugar': 'dry',
-    'Ice': 'dry',
+    'Cornstarch': 'dry',
+    'Breadcrumbs': 'dry',
+    'Gochujang': 'dry',
+    'Oyster sauce': 'dry',
+    'Shrimp paste': 'dry',
+    'Tamarind mix': 'dry',
+    'Peppercorn': 'dry',
+    'Chili flakes': 'dry',
+    'Honey': 'dry',
+    'Bay leaves': 'dry',
+    'Herbs': 'dry',
+    'Vegetables': 'dry',
+    'Sweet tomato sauce': 'dry',
+    'Gravy': 'dry',
+    'Batter': 'dry',
+    'Cheese sauce': 'dry',
+    'Ground meat': 'dry',
     'Water': 'dry',
+    'Ice': 'dry',
     
-    // Beverages
-    'Sprite': 'beverage',
-    'Coke': 'beverage',
+    // ==================== NOODLES & PASTA ====================
+    'Pancit canton': 'dry',
+    'Rice noodles': 'dry',
+    'Spaghetti pasta': 'dry',
+    'Pasta': 'dry',
+    'Pancit bihon': 'dry',
     
-    // Packaging
+    // ==================== RICE & GRAINS ====================
+    'Rice': 'dry',
+    
+    // ==================== BEVERAGES ====================
+    'Lemon juice': 'beverage',
+    'Blue syrup': 'beverage',
+    'Tea': 'beverage',
+    'Black tea': 'beverage',
+    'Espresso': 'beverage',
+    'Hot water': 'beverage',
+    'Steamed milk': 'beverage',
+    'Carbonated soft drink': 'beverage',
+    'Chicken broth': 'beverage',
+    'Milk tea base': 'beverage',
+    
+    // ==================== COFFEE & TEA INGREDIENTS ====================
+    'Coffee beans': 'dry',
+    'Matcha powder': 'dry',
+    'Caramel syrup': 'dry',
+    'Vanilla syrup': 'dry',
+    'Strawberry syrup': 'dry',
+    'Mango flavor': 'dry',
+    'Cream cheese flavor': 'dry',
+    'Tapioca pearls': 'dry',
+    'Cookie crumbs': 'dry',
+    
+    // ==================== SNACKS & SIDES ====================
+    'Nacho chips': 'dry',
+    'Lumpia wrapper': 'dry',
+    'French fries': 'dry',
+    
+    // ==================== PACKAGING ====================
     'Paper cups': 'packaging',
     'Straws': 'packaging',
-    'Napkins': 'packaging'
+    'Napkins': 'packaging',
+    'Food containers': 'packaging',
+    'Plastic utensils': 'packaging'
 };
 
 // ==================== COMPLETE RECIPE MAPPING ====================
@@ -125,293 +199,344 @@ const validRawIngredients = {
 // When ingredient stock = 0, ALL listed menu items become UNAVAILABLE
 
 const recipeMapping = {
-    // ===== MEAT & POULTRY =====
+    // ================ MEAT & POULTRY ================
+    'Pork': [
+        'Korean Spicy Bulgogi (Pork)',
+        'Korean Salt and Pepper (Pork)',
+        'Crispy Pork Lechon Kawali',
+        'Pork Shanghai',
+        'Sinigang (Pork)',
+        'Sizzling Pork Sisig',
+        'Sizzling Liempo',
+        'Sizzling Porkchop'
+    ],
+    'Pork belly': [
+        'Crispy Pork Lechon Kawali',
+        'Sizzling Liempo'
+    ],
     'Chicken': [
-        'Fried Chicken',
         'Buttered Honey Chicken',
         'Buttered Spicy Chicken',
         'Chicken Adobo',
-        'Sizzling Fried Chicken'
+        'Fried Chicken',
+        'Sizzling Fried Chicken',
+        'Clubhouse Sandwich'
     ],
-    
-    'Pork slices': [
-        'Korean Spicy Bulgogi (Pork)',
-        'Korean Salt and Pepper (Pork)',
-        'Pork Adobo',
-        'Sizzling Pork'
+    'Fried chicken': [
+        'Fried Chicken',
+        'Budget Fried Chicken',
+        'Fish and Fries'
     ],
-    
-    'Pork belly': [
-        'Crisky Pork Lechon Kawali',
-        'Sizzling Liempo'
-    ],
-    
-    'Pork ribs': [
-        'Sizzling Porkchop'
-    ],
-    
-    'Ground pork': [
-        'Pork Shanghai'
-    ],
-    
-    // ===== SEAFOOD =====
-    'Cream dory fillet': [
+    'Cream dory': [
         'Cream Dory Fish Fillet',
         'Fish and Fries'
     ],
-    
     'Shrimp': [
         'Sinigang (Shrimp)',
-        'Buttered Shrimp'
+        'Buttered Shrimp',
+        'Special Bulalo'
+    ],
+    'Bagnet': [
+        'Paknet (Pakbet w/ Bagnet)'
+    ],
+    'Tinapa': [
+        'Tinapa Rice'
+    ],
+    'Tuyo': [
+        'Tuyo Pesto'
     ],
     
-    // ===== VEGETABLES & HERBS =====
+    // ================ FRESH PRODUCE ================
     'Garlic': [
         'Korean Spicy Bulgogi (Pork)',
         'Korean Salt and Pepper (Pork)',
-        'Crisky Pork Lechon Kawali',
+        'Crispy Pork Lechon Kawali',
+        'Sizzling Pork Sisig',
         'Sizzling Liempo',
         'Sizzling Porkchop',
-        'Sizzling Pork Sisig',
         'Sizzling Fried Chicken',
         'Pork Shanghai',
-        'Pork Adobo',
         'Chicken Adobo',
-        'Sinigang (PORK)',
+        'Sinigang (Pork)',
         'Sinigang (Shrimp)',
         'Paknet (Pakbet w/ Bagnet)',
-        'Special Bulalo (good for 2-3 Persons)',
-        'Special Bulalo Buy 1 Take 1 (good for 6-8 Persons)',
-        'Pancit Bihon (S)',
-        'Pancit Bihon (M)',
-        'Pancit Bihon (L)',
-        'Pancit Canton (S)',
-        'Pancit Canton (M)',
-        'Pancit Canton (L)',
-        'Spaghetti (S)',
-        'Spaghetti (M)',
-        'Spaghetti (L)'
+        'Special Bulalo',
+        'Pancit Bihon',
+        'Pancit Canton + Bihon (Mixed)',
+        'Spaghetti (Filipino Style)',
+        'Fried Rice'
     ],
-    
     'Onion': [
         'Korean Spicy Bulgogi (Pork)',
         'Korean Salt and Pepper (Pork)',
-        'Crisky Pork Lechon Kawali',
-        'Pork Adobo',
+        'Crispy Pork Lechon Kawali',
         'Sizzling Pork Sisig',
         'Chicken Adobo',
-        'Sinigang (PORK)',
+        'Sinigang (Pork)',
         'Sinigang (Shrimp)',
         'Paknet (Pakbet w/ Bagnet)',
-        'Special Bulalo (good for 2-3 Persons)',
-        'Special Bulalo Buy 1 Take 1 (good for 6-8 Persons)',
-        'Fried Rice',
-        'Pancit Bihon (S)',
-        'Pancit Bihon (M)',
-        'Pancit Bihon (L)',
-        'Pancit Canton (S)',
-        'Pancit Canton (M)',
-        'Pancit Canton (L)',
-        'Spaghetti (S)',
-        'Spaghetti (M)',
-        'Spaghetti (L)'
-    ],
-    
-    'Tomato': [
-        'Pork Adobo',
-        'Chicken Adobo',
-        'Sinigang (PORK)',
-        'Sinigang (Shrimp)',
-        'Paknet (Pakbet w/ Bagnet)'
-    ],
-    
-    // ===== PANTRY STAPLES =====
-    'Soy sauce': [
-        'Korean Spicy Bulgogi (Pork)',
-        'Korean Salt and Pepper (Pork)',
-        'Pork Adobo',
-        'Chicken Adobo',
-        'Sizzling Pork Sisig',
-        'Pancit Bihon (S)',
-        'Pancit Bihon (M)',
-        'Pancit Bihon (L)',
-        'Pancit Canton (S)',
-        'Pancit Canton (M)',
-        'Pancit Canton (L)',
-        'Spaghetti (S)',
-        'Spaghetti (M)',
-        'Spaghetti (L)',
-        'Fried Rice'
-    ],
-    
-    'Cooking oil': [
-        'Fried Chicken',
-        'Buttered Honey Chicken',
-        'Buttered Spicy Chicken',
-        'Sizzling Fried Chicken',
-        'Sizzling Pork Sisig',
-        'Sizzling Liempo',
-        'Sizzling Porkchop',
-        'Crisky Pork Lechon Kawali',
-        'French fries',
-        'Fish and Fries',
-        'Cheesy Dynamite Lumpia',
-        'Lumpiang Shanghai',
+        'Special Bulalo',
+        'Pancit Bihon',
+        'Pancit Canton + Bihon (Mixed)',
+        'Spaghetti (Filipino Style)',
         'Fried Rice',
         'Cheesy Nachos',
         'Nachos Supreme'
     ],
-    
-    'Salt': [
+    'Chili': [
         'Korean Spicy Bulgogi (Pork)',
         'Korean Salt and Pepper (Pork)',
-        'Pork Adobo',
-        'Chicken Adobo',
-        'Fried Chicken',
-        'Buttered Honey Chicken',
-        'Buttered Spicy Chicken',
-        'Sizzling Fried Chicken',
         'Sizzling Pork Sisig',
-        'Sizzling Liempo',
-        'Sizzling Porkchop',
-        'Crisky Pork Lechon Kawali',
-        'Cream Dory Fish Fillet',
-        'Fish and Fries',
-        'Sinigang (PORK)',
+        'Sinigang (Pork)',
+        'Sinigang (Shrimp)'
+    ],
+    'Calamansi': [
+        'Sizzling Pork Sisig',
+        'Sinigang (Pork)',
         'Sinigang (Shrimp)',
-        'Paknet (Pakbet w/ Bagnet)',
         'Buttered Shrimp',
-        'Special Bulalo (good for 2-3 Persons)',
-        'Special Bulalo Buy 1 Take 1 (good for 6-8 Persons)',
-        'Fried Rice',
-        'Plain Rice',
-        'Pancit Bihon (S)',
-        'Pancit Bihon (M)',
-        'Pancit Bihon (L)',
-        'Pancit Canton (S)',
-        'Pancit Canton (M)',
-        'Pancit Canton (L)',
-        'Spaghetti (S)',
-        'Spaghetti (M)',
-        'Spaghetti (L)'
+        'Cucumber Lemonade',
+        'Blue Lemonade'
     ],
-    
-    'Black pepper': [
-        'Korean Spicy Bulgogi (Pork)',
-        'Korean Salt and Pepper (Pork)',
-        'Sizzling Pork Sisig',
-        'Fried Chicken',
-        'Sinigang (PORK)',
+    'Tomato': [
+        'Chicken Adobo',
+        'Sinigang (Pork)',
         'Sinigang (Shrimp)',
         'Paknet (Pakbet w/ Bagnet)',
-        'Buttered Shrimp'
+        'Spaghetti (Filipino Style)'
+    ],
+    'Cucumber': [
+        'Cucumber Lemonade',
+        'Paknet (Pakbet w/ Bagnet)'
+    ],
+    'Corn': [
+        'Special Bulalo',
+        'Paknet (Pakbet w/ Bagnet)'
+    ],
+    'Potato': [
+        'Special Bulalo',
+        'Paknet (Pakbet w/ Bagnet)'
+    ],
+    'Carrots': [
+        'Special Bulalo',
+        'Paknet (Pakbet w/ Bagnet)',
+        'Pancit Bihon',
+        'Pancit Canton + Bihon (Mixed)'
     ],
     
-    'Sugar': [
-        'Korean Spicy Bulgogi (Pork)',
-        'Pork Adobo',
-        'Chicken Adobo',
+    // ================ DAIRY & EGGS ================
+    'Egg': [
         'Sizzling Pork Sisig',
-        'Cucumber Lemonade (Glass)',
-        'Cucumber Lemonade (Pitcher)',
-        'Blue Lemonade (Glass)',
-        'Blue Lemonade (Pitcher)',
-        'Red Tea (Glass)',
-        'Matcha Green Tea HC',
-        'Matcha Green Tea MC',
-        'Milk Tea Regular HC',
-        'Milk Tea Regular MC'
+        'Fried Rice'
     ],
-    
-    // ===== DAIRY & EGGS =====
-    'Eggs': [
-        'Fried Rice',
-        'Omelette',
-        'Scrambled Eggs'
-    ],
-    
     'Butter': [
         'Buttered Honey Chicken',
         'Buttered Spicy Chicken',
-        'Buttered Shrimp',
-        'Garlic Bread'
+        'Buttered Shrimp'
     ],
-    
+    'Mayonnaise': [
+        'Sizzling Pork Sisig',
+        'Clubhouse Sandwich'
+    ],
+    'Cream': [
+        'Caramel Macchiato',
+        'Cookies & Cream',
+        'Strawberry & Cream',
+        'Mango Cheesecake'
+    ],
+    'Cream cheese flavor': [
+        'Mango Cheesecake'
+    ],
     'Milk': [
-        'Milk Tea Regular HC',
-        'Milk Tea Regular MC',
-        'Cafe Americano Tall',
-        'Cafe Americano Grande',
-        'Cafe Latte Tall',
-        'Cafe Latte Grande',
-        'Caramel Macchiato Tall',
-        'Caramel Macchiato Grande',
-        'Matcha Green Tea HC',
-        'Matcha Green Tea MC',
-        'Cookies & Cream HC',
-        'Cookies & Cream MC',
-        'Strawberry & Cream HC',
-        'Mango cheese cake HC'
+        'Cafe Latte',
+        'Caramel Macchiato',
+        'Milk Tea',
+        'Cookies & Cream',
+        'Strawberry & Cream',
+        'Mango Cheesecake',
+        'Steamed milk'
     ],
-    
     'Cheese': [
         'Cheesy Nachos',
         'Nachos Supreme',
         'Cheesy Dynamite Lumpia'
     ],
     
-    // ===== BEVERAGES =====
-    'Coke': [
-        'Soda (Mismo)',
-        'Soda 1.5L'
+    // ================ PANTRY STAPLES ================
+    'Gochujang': [
+        'Korean Spicy Bulgogi (Pork)',
+        'Korean Salt and Pepper (Pork)'
     ],
-    
-    'Sprite': [
-        'Soda (Mismo)',
-        'Soda 1.5L'
-    ],
-    
-    // ===== PACKAGING (These prevent items if out of stock) =====
-    'Paper cups': [
-        'Cafe Americano Tall',
-        'Cafe Americano Grande',
-        'Cafe Latte Tall',
-        'Cafe Latte Grande',
-        'Caramel Macchiato Tall',
-        'Caramel Macchiato Grande',
-        'Milk Tea Regular HC',
-        'Milk Tea Regular MC',
-        'Matcha Green Tea HC',
-        'Matcha Green Tea MC',
-        'Cookies & Cream HC',
-        'Cookies & Cream MC',
-        'Strawberry & Cream HC',
-        'Mango cheese cake HC',
-        'Cucumber Lemonade (Glass)',
-        'Blue Lemonade (Glass)',
-        'Red Tea (Glass)'
-    ],
-    
-    'Straws': [
-        'Milk Tea Regular HC',
-        'Milk Tea Regular MC',
-        'Matcha Green Tea HC',
-        'Matcha Green Tea MC',
-        'Cookies & Cream HC',
-        'Cookies & Cream MC',
-        'Strawberry & Cream HC',
-        'Mango cheese cake HC',
-        'Cucumber Lemonade (Glass)',
-        'Cucumber Lemonade (Pitcher)',
-        'Blue Lemonade (Glass)',
-        'Blue Lemonade (Pitcher)',
-        'Red Tea (Glass)'
-    ],
-    
-    'Napkins': [
+    'Sesame oil': [
         'Korean Spicy Bulgogi (Pork)',
         'Korean Salt and Pepper (Pork)',
-        'Crisky Pork Lechon Kawali',
+        'Fried Rice'
+    ],
+    'Soy sauce': [
+        'Korean Spicy Bulgogi (Pork)',
+        'Korean Salt and Pepper (Pork)',
+        'Chicken Adobo',
+        'Sizzling Pork Sisig',
+        'Pancit Bihon',
+        'Pancit Canton + Bihon (Mixed)',
+        'Spaghetti (Filipino Style)',
+        'Fried Rice'
+    ],
+    'Oyster sauce': [
+        'Sizzling Pork Sisig',
+        'Pancit Bihon',
+        'Pancit Canton + Bihon (Mixed)'
+    ],
+    'Shrimp paste': [
+        'Sinigang (Pork)',
+        'Sinigang (Shrimp)',
+        'Tuyo Pesto'
+    ],
+    'Tamarind mix': [
+        'Sinigang (Pork)',
+        'Sinigang (Shrimp)'
+    ],
+    'Cooking oil': [
+        'Korean Spicy Bulgogi (Pork)',
+        'Korean Salt and Pepper (Pork)',
+        'Crispy Pork Lechon Kawali',
+        'Pork Shanghai',
+        'Sizzling Pork Sisig',
+        'Sizzling Liempo',
+        'Sizzling Porkchop',
+        'Sizzling Fried Chicken',
+        'Fried Chicken',
+        'Budget Fried Chicken',
+        'Cream Dory Fish Fillet',
+        'Fish and Fries',
+        'French Fries',
+        'Cheesy Dynamite Lumpia',
+        'Lumpiang Shanghai',
+        'Fried Rice',
+        'Cheesy Nachos',
+        'Nachos Supreme'
+    ],
+    'Salt': [
+        'Korean Spicy Bulgogi (Pork)',
+        'Korean Salt and Pepper (Pork)',
+        'Crispy Pork Lechon Kawali',
+        'Sizzling Pork Sisig',
+        'Sizzling Liempo',
+        'Sizzling Porkchop',
+        'Sizzling Fried Chicken',
+        'Fried Chicken',
+        'Budget Fried Chicken',
+        'Cream Dory Fish Fillet',
+        'Fish and Fries',
+        'French Fries',
+        'Chicken Adobo',
+        'Sinigang (Pork)',
+        'Sinigang (Shrimp)',
+        'Paknet (Pakbet w/ Bagnet)',
+        'Buttered Shrimp',
+        'Special Bulalo',
+        'Fried Rice',
+        'Plain Rice'
+    ],
+    'Black pepper': [
+        'Korean Spicy Bulgogi (Pork)',
+        'Korean Salt and Pepper (Pork)',
+        'Sizzling Pork Sisig',
+        'Sinigang (Pork)',
+        'Sinigang (Shrimp)',
+        'Paknet (Pakbet w/ Bagnet)',
+        'Buttered Shrimp'
+    ],
+    'Peppercorn': [
+        'Korean Salt and Pepper (Pork)'
+    ],
+    'Cornstarch': [
+        'Crispy Pork Lechon Kawali',
+        'Pork Shanghai',
+        'Lumpiang Shanghai',
+        'Cheesy Dynamite Lumpia'
+    ],
+    'Bay leaves': [
+        'Chicken Adobo',
+        'Sinigang (Pork)',
+        'Sinigang (Shrimp)',
+        'Special Bulalo'
+    ],
+    'Honey': [
+        'Buttered Honey Chicken',
+        'Cucumber Lemonade',
+        'Blue Lemonade',
+        'Red Tea'
+    ],
+    'Sugar': [
+        'Cucumber Lemonade',
+        'Blue Lemonade',
+        'Red Tea',
+        'Cafe Latte',
+        'Cafe Americano',
+        'Caramel Macchiato',
+        'Milk Tea',
+        'Matcha Green Tea',
+        'Cookies & Cream',
+        'Strawberry & Cream',
+        'Mango Cheesecake',
+        'Fried Rice'
+    ],
+    'Breadcrumbs': [
+        'Pork Shanghai',
+        'Lumpiang Shanghai',
+        'Fried Chicken',
+        'Budget Fried Chicken',
+        'Cream Dory Fish Fillet'
+    ],
+    'Flour': [
+        'Pork Shanghai',
+        'Lumpiang Shanghai',
+        'Fried Chicken',
+        'Budget Fried Chicken',
+        'Cream Dory Fish Fillet',
+        'French Fries',
+        'Fish and Fries'
+    ],
+    'Gravy': [
+        'Clubhouse Sandwich'
+    ],
+    'Cheese sauce': [
+        'Cheesy Nachos',
+        'Nachos Supreme',
+        'Cheesy Dynamite Lumpia'
+    ],
+    'Sweet tomato sauce': [
+        'Spaghetti (Filipino Style)'
+    ],
+    'Vegetables': [
+        'Special Bulalo',
+        'Paknet (Pakbet w/ Bagnet)'
+    ],
+    'Water': [
+        'Special Bulalo',
+        'Sinigang (Pork)',
+        'Sinigang (Shrimp)',
+        'Fried Rice'
+    ],
+    
+    // ================ NOODLES & PASTA ================
+    'Pancit canton': [
+        'Pancit Canton + Bihon (Mixed)'
+    ],
+    'Rice noodles': [
+        'Pancit Bihon',
+        'Pancit Canton + Bihon (Mixed)'
+    ],
+    'Spaghetti pasta': [
+        'Spaghetti (Filipino Style)'
+    ],
+    
+    // ================ RICE ================
+    'Rice': [
+        'Korean Spicy Bulgogi (Pork)',
+        'Korean Salt and Pepper (Pork)',
+        'Crispy Pork Lechon Kawali',
         'Cream Dory Fish Fillet',
         'Buttered Honey Chicken',
         'Buttered Spicy Chicken',
@@ -421,22 +546,194 @@ const recipeMapping = {
         'Sizzling Liempo',
         'Sizzling Porkchop',
         'Sizzling Fried Chicken',
+        'Fried Chicken',
+        'Budget Fried Chicken',
+        'Tinapa Rice',
+        'Tuyo Pesto',
+        'Fried Rice',
+        'Plain Rice',
+        'Sinigang (Pork)',
+        'Sinigang (Shrimp)',
+        'Paknet (Pakbet w/ Bagnet)',
+        'Buttered Shrimp',
+        'Special Bulalo'
+    ],
+    
+    // ================ BEVERAGES ================
+    'Lemon juice': [
+        'Cucumber Lemonade',
+        'Blue Lemonade'
+    ],
+    'Blue syrup': [
+        'Blue Lemonade'
+    ],
+    'Tea': [
+        'Red Tea',
+        'Milk Tea',
+        'Matcha Green Tea'
+    ],
+    'Black tea': [
+        'Red Tea'
+    ],
+    'Espresso': [
+        'Cafe Americano',
+        'Cafe Latte',
+        'Caramel Macchiato'
+    ],
+    'Hot water': [
+        'Cafe Americano',
+        'Red Tea'
+    ],
+    'Steamed milk': [
+        'Cafe Latte',
+        'Caramel Macchiato'
+    ],
+    'Carbonated soft drink': [
+        'Soda'
+    ],
+    'Chicken broth': [
+        'Special Bulalo'
+    ],
+    
+    // ================ COFFEE & TEA INGREDIENTS ================
+    'Coffee beans': [
+        'Cafe Americano',
+        'Cafe Latte',
+        'Caramel Macchiato'
+    ],
+    'Matcha powder': [
+        'Matcha Green Tea'
+    ],
+    'Caramel syrup': [
+        'Caramel Macchiato'
+    ],
+    'Vanilla syrup': [
+        'Cafe Latte'
+    ],
+    'Strawberry syrup': [
+        'Strawberry & Cream'
+    ],
+    'Mango flavor': [
+        'Mango Cheesecake'
+    ],
+    'Tapioca pearls': [
+        'Milk Tea',
+        'Matcha Green Tea',
+        'Cookies & Cream',
+        'Strawberry & Cream',
+        'Mango Cheesecake'
+    ],
+    'Cookie crumbs': [
+        'Cookies & Cream'
+    ],
+    
+    // ================ SNACKS & SIDES ================
+    'Nacho chips': [
+        'Cheesy Nachos',
+        'Nachos Supreme'
+    ],
+    'Lumpia wrapper': [
+        'Lumpiang Shanghai',
+        'Cheesy Dynamite Lumpia'
+    ],
+    'French fries': [
+        'French Fries',
+        'Fish and Fries'
+    ],
+    'Bread': [
+        'Clubhouse Sandwich'
+    ],
+    
+    // ================ PACKAGING (prevent menu items if out of stock) ================
+    'Paper cups': [
+        'Cucumber Lemonade',
+        'Blue Lemonade',
+        'Red Tea',
+        'Cafe Americano',
+        'Cafe Latte',
+        'Caramel Macchiato',
+        'Milk Tea',
+        'Matcha Green Tea',
+        'Cookies & Cream',
+        'Strawberry & Cream',
+        'Mango Cheesecake',
+        'Soda'
+    ],
+    'Straws': [
+        'Cucumber Lemonade',
+        'Blue Lemonade',
+        'Red Tea',
+        'Milk Tea',
+        'Matcha Green Tea',
+        'Cookies & Cream',
+        'Strawberry & Cream',
+        'Mango Cheesecake',
+        'Soda'
+    ],
+    'Napkins': [
+        'Korean Spicy Bulgogi (Pork)',
+        'Korean Salt and Pepper (Pork)',
+        'Crispy Pork Lechon Kawali',
+        'Cream Dory Fish Fillet',
+        'Buttered Honey Chicken',
+        'Buttered Spicy Chicken',
+        'Chicken Adobo',
+        'Pork Shanghai',
+        'Sizzling Pork Sisig',
+        'Sizzling Liempo',
+        'Sizzling Porkchop',
+        'Sizzling Fried Chicken',
+        'Fried Chicken',
+        'Budget Fried Chicken',
         'Cheesy Nachos',
         'Nachos Supreme',
-        'French fries',
+        'French Fries',
         'Clubhouse Sandwich',
         'Fish and Fries',
         'Cheesy Dynamite Lumpia',
         'Lumpiang Shanghai',
-        'Fried Chicken',
         'Tinapa Rice',
         'Tuyo Pesto',
-        'Sinigang (PORK)',
+        'Sinigang (Pork)',
         'Sinigang (Shrimp)',
         'Paknet (Pakbet w/ Bagnet)',
         'Buttered Shrimp',
-        'Special Bulalo (good for 2-3 Persons)',
-        'Special Bulalo Buy 1 Take 1 (good for 6-8 Persons)'
+        'Special Bulalo'
+    ],
+    'Food containers': [
+        'Korean Spicy Bulgogi (Pork)',
+        'Korean Salt and Pepper (Pork)',
+        'Crispy Pork Lechon Kawali',
+        'Cream Dory Fish Fillet',
+        'Buttered Honey Chicken',
+        'Buttered Spicy Chicken',
+        'Chicken Adobo',
+        'Pork Shanghai',
+        'Sizzling Pork Sisig',
+        'Sizzling Liempo',
+        'Sizzling Porkchop',
+        'Sizzling Fried Chicken',
+        'Fried Chicken',
+        'Budget Fried Chicken',
+        'Pancit Bihon',
+        'Pancit Canton + Bihon (Mixed)',
+        'Spaghetti (Filipino Style)',
+        'Cheesy Nachos',
+        'Nachos Supreme',
+        'French Fries',
+        'Clubhouse Sandwich',
+        'Fish and Fries',
+        'Cheesy Dynamite Lumpia',
+        'Lumpiang Shanghai',
+        'Fried Rice',
+        'Plain Rice',
+        'Tinapa Rice',
+        'Tuyo Pesto',
+        'Sinigang (Pork)',
+        'Sinigang (Shrimp)',
+        'Paknet (Pakbet w/ Bagnet)',
+        'Buttered Shrimp',
+        'Special Bulalo'
     ]
 };
 
@@ -655,12 +952,62 @@ function autoFillItemFromCategory(category) {
     }
 }
 
+// ==================== DUPLICATE DETECTION ====================
+
+function checkAndShowDuplicateNotification() {
+    const itemName = elements.itemName?.value;
+    const itemId = elements.itemId?.value;
+    const isEdit = itemId && itemId.trim() !== '';
+    
+    if (!itemName || !elements.duplicateNotification) {
+        hideDuplicateNotification();
+        return;
+    }
+    
+    // Check if this ingredient already exists
+    const isDuplicate = allInventoryItems.some(item => {
+        const isSameName = item.itemName.toLowerCase() === itemName.toLowerCase();
+        
+        // When adding new, any match is a duplicate
+        if (!isEdit) {
+            return isSameName;
+        }
+        
+        // When editing, exclude the current item from comparison
+        return isSameName && (item._id !== itemId && item.id !== itemId);
+    });
+    
+    if (isDuplicate) {
+        showDuplicateNotification(itemName);
+    } else {
+        hideDuplicateNotification();
+    }
+}
+
+function showDuplicateNotification(ingredientName) {
+    if (!elements.duplicateNotification || !elements.duplicateIngredientName) return;
+    
+    elements.duplicateIngredientName.textContent = ingredientName;
+    elements.duplicateNotification.classList.add('show');
+    elements.duplicateNotification.style.display = 'flex';
+}
+
+function hideDuplicateNotification() {
+    if (!elements.duplicateNotification) return;
+    
+    elements.duplicateNotification.classList.remove('show');
+    elements.duplicateNotification.style.display = 'none';
+}
+
 // ==================== MODAL FUNCTIONS ====================
 
 function openAddModal() {
     if (elements.modalTitle) elements.modalTitle.textContent = 'Add New Raw Ingredient';
     if (elements.itemId) elements.itemId.value = '';
     if (elements.itemForm) elements.itemForm.reset();
+    
+    // Hide duplicate notification when opening add modal
+    hideDuplicateNotification();
     
     updateCategoryOptions();
     updateItemNameOptions();
@@ -722,6 +1069,9 @@ function openEditModal(itemId) {
     // Show recipe info
     showRecipeInfo(item.itemName);
     
+    // Check for duplicate notification (in case name was changed to match another)
+    checkAndShowDuplicateNotification();
+    
     // Open modal
     elements.itemModal.style.display = 'flex';
     isModalOpen = true;
@@ -733,6 +1083,7 @@ function closeModal() {
         isModalOpen = false;
     }
     if (elements.itemForm) elements.itemForm.reset();
+    hideDuplicateNotification();
 }
 
 // ==================== GRID RENDERING FUNCTIONS ====================
@@ -865,13 +1216,9 @@ function renderInventoryGrid() {
                     <div class="stock-levels">
                         <div class="stock-item">
                             <span class="label">Current:</span>
-                            <div style="display: flex; align-items: center; gap: 8px; margin-top: 5px;">
-                                <button class="btn-decrease" onclick="decreaseStock('${item._id || item.id}', '${item.itemName}')" style="padding: 5px 10px; background: #ff6b6b; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; font-weight: bold;">−</button>
-                                <span class="value ${isOutOfStock ? 'text-danger' : isLowStock ? 'text-warning' : 'text-success'}" style="min-width: 60px; text-align: center;">
-                                    ${currentStock} ${unit}
-                                </span>
-                                <button class="btn-increase" onclick="increaseStock('${item._id || item.id}', '${item.itemName}')" style="padding: 5px 10px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; font-weight: bold;">+</button>
-                            </div>
+                            <span class="value ${isOutOfStock ? 'text-danger' : isLowStock ? 'text-warning' : 'text-success'}" style="margin-top: 5px; display: block;">
+                                ${currentStock} ${unit}
+                            </span>
                         </div>
                         <div class="stock-item">
                             <span class="label">Min:</span>
@@ -1007,10 +1354,8 @@ function renderFilteredDashboardGrid(filteredItems) {
                         <div class="stock-bar">
                             <div class="stock-bar-fill" style="width: ${percentage}%; background-color: ${isOutOfStock ? '#dc3545' : isLowStock ? '#ffc107' : '#28a745'};"></div>
                         </div>
-                        <div class="stock-numbers" style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px;">
-                            <button class="btn-decrease" onclick="decreaseStock('${item._id || item.id}', '${item.itemName}')" style="padding: 5px 10px; background: #ff6b6b; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: bold;">−</button>
-                            <span style="min-width: 80px; text-align: center; font-weight: 600;">${currentStock} ${unit}</span>
-                            <button class="btn-increase" onclick="increaseStock('${item._id || item.id}', '${item.itemName}')" style="padding: 5px 10px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: bold;">+</button>
+                        <div class="stock-numbers" style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 8px; font-weight: 600;">
+                            <span style="min-width: 80px; text-align: center;">${currentStock} ${unit}</span>
                         </div>
                     </div>
                     <div class="card-details">
@@ -1226,6 +1571,32 @@ async function handleSaveItem() {
         return;
     }
     
+    // ✅ CHECK FOR DUPLICATE INGREDIENTS (when adding new)
+    if (!isEdit) {
+        const isDuplicate = allInventoryItems.some(item => 
+            item.itemName.toLowerCase().trim() === itemData.itemName.toLowerCase().trim()
+        );
+        
+        if (isDuplicate) {
+            showToast(`❌ ERROR: "${itemData.itemName}" already exists in inventory!`, 'error');
+            console.warn(`❌ Duplicate detected: ${itemData.itemName}`);
+            return;
+        }
+    } else {
+        // When editing, check if another ingredient with same name exists (excluding current one)
+        const isDuplicate = allInventoryItems.some(item => {
+            const sameNameCheck = item.itemName.toLowerCase().trim() === itemData.itemName.toLowerCase().trim();
+            const differentItemCheck = item._id !== itemId && item.id !== itemId;
+            return sameNameCheck && differentItemCheck;
+        });
+        
+        if (isDuplicate) {
+            showToast(`❌ ERROR: Another ingredient already has this name`, 'error');
+            console.warn(`❌ Duplicate detected during edit: ${itemData.itemName}`);
+            return;
+        }
+    }
+    
     try {
         showLoading(isEdit ? 'Updating item...' : 'Adding item...');
         
@@ -1249,22 +1620,37 @@ async function handleSaveItem() {
         
         if (!response.ok) {
             const errorData = await response.json();
+            
+            // Handle duplicate error specifically
+            if (response.status === 409 || errorData.duplicate) {
+                console.error(`❌ Duplicate conflict: ${errorData.message}`);
+                showToast(`❌ ${errorData.message}`, 'error');
+                hideLoading();
+                return;
+            }
+            
             throw new Error(errorData.message || 'Failed to save item');
         }
         
         const result = await response.json();
         
         if (result.success) {
-            showToast(isEdit ? 'Item updated successfully!' : 'Item added successfully!', 'success');
+            showToast(isEdit ? '✅ Item updated successfully!' : '✅ Item added successfully!', 'success');
             
             // Refresh inventory from MongoDB
             await fetchInventoryItems();
+            
+            // ✅ FIX: Load persisted inventory stock values AFTER fetching from DB
+            loadInventoryWithPersistedValues();
             
             // Update UI
             renderInventoryGrid();
             renderDashboardGrid();
             updateDashboardStats();
             updateCategoryCounts();
+            
+            // ✅ FIX: Save inventory stock values to prevent reset
+            saveInventoryStockValues();
             
             // Refresh dashboard stats to sync with backend
             await refreshDashboardInventoryCount();
@@ -1277,7 +1663,7 @@ async function handleSaveItem() {
         
     } catch (error) {
         console.error('Error saving item:', error);
-        showToast(`Failed to save item: ${error.message}`, 'error');
+        showToast(`❌ Failed to save item: ${error.message}`, 'error');
     } finally {
         hideLoading();
     }
@@ -1300,6 +1686,9 @@ function updateFromItemName() {
     }
     
     showRecipeInfo(itemName);
+    
+    // Check for duplicate ingredients and show notification
+    checkAndShowDuplicateNotification();
 }
 
 // ==================== FETCH INVENTORY ITEMS FROM MONGODB ====================
@@ -1342,6 +1731,52 @@ async function fetchInventoryItems() {
         console.error('❌ Error fetching inventory from MongoDB:', error);
         showToast(`Failed to load inventory: ${error.message}`, 'error');
         return { success: false, data: [] };
+    }
+}
+
+// ==================== ✅ LOAD PERSISTED INVENTORY STOCK ====================
+function loadInventoryWithPersistedValues() {
+    const persistedInventory = localStorage.getItem('inventory_stock_currentValues');
+    if (persistedInventory) {
+        try {
+            const persistedValues = JSON.parse(persistedInventory);
+            console.log('📦 Loading persisted inventory stock values...');
+            
+            // Update allInventoryItems with persisted values
+            allInventoryItems.forEach(item => {
+                const itemKey = item._id || item.id || item.itemName;
+                if (persistedValues[itemKey] !== undefined) {
+                    const oldStock = item.currentStock;
+                    item.currentStock = persistedValues[itemKey];
+                    console.log(`  ${item.itemName}: ${oldStock} → ${item.currentStock} (persisted)`);
+                }
+            });
+            
+            console.log('✅ Persisted inventory values restored');
+            return true;
+        } catch (error) {
+            console.error('❌ Error loading persisted inventory:', error);
+            return false;
+        }
+    }
+    return false;
+}
+
+// ==================== 💾 SAVE PERSISTED INVENTORY STOCK ====================
+function saveInventoryStockValues() {
+    try {
+        const stockValues = {};
+        
+        // Save all current inventory stock values
+        allInventoryItems.forEach(item => {
+            const itemKey = item._id || item.id || item.itemName;
+            stockValues[itemKey] = item.currentStock;
+        });
+        
+        localStorage.setItem('inventory_stock_currentValues', JSON.stringify(stockValues));
+        console.log('💾 Saved inventory stock values (prevents reset)');
+    } catch (error) {
+        console.error('❌ Error saving inventory stock values:', error);
     }
 }
 
@@ -1731,6 +2166,9 @@ document.addEventListener('DOMContentLoaded', function() {
     fetchInventoryItems().then(() => {
         console.log('📦 Inventory items loaded:', allInventoryItems.length);
         
+        // ✅ FIX: Load persisted inventory stock values BEFORE rendering
+        loadInventoryWithPersistedValues();
+        
         // Update UI
         updateCategoryCounts();
         updateDashboardStats();
@@ -1775,6 +2213,9 @@ async function increaseStock(itemId, itemName) {
             renderInventoryGrid();
             renderDashboardGrid();
             updateDashboardStats();
+            
+            // ✅ FIX: Save inventory stock values to prevent reset
+            saveInventoryStockValues();
         } else {
             showToast('Failed to update stock', 'error');
         }
@@ -1814,6 +2255,9 @@ async function decreaseStock(itemId, itemName) {
             renderInventoryGrid();
             renderDashboardGrid();
             updateDashboardStats();
+            
+            // ✅ FIX: Save inventory stock values to prevent reset
+            saveInventoryStockValues();
         } else {
             showToast('Failed to update stock', 'error');
         }

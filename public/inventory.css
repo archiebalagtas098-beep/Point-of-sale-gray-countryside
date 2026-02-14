@@ -1105,20 +1105,23 @@ body {
     z-index: 9999;
     justify-content: center;
     align-items: center;
+    overflow-y: auto;
+    padding: 20px;
 }
 
 .modal-content {
     background: white;
-    width: 90%;
-    max-width: 650px;
+    width: 100%;
+    max-width: 700px;
     border-radius: 12px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
     animation: modalSlideIn 0.3s ease;
     border: 1px solid #e0e0e0;
+    margin: auto;
 }
 
 .modal-header {
-    padding: 20px 24px;
+    padding: 24px;
     border-bottom: 1px solid #e0e0e0;
     display: flex;
     justify-content: space-between;
@@ -1129,52 +1132,119 @@ body {
 
 .modal-header h2 {
     margin: 0;
-    font-size: 1.25rem;
-    font-weight: 600;
-    color: #333;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #2c3e50;
 }
 
 .close {
-    color: #666;
-    font-size: 24px;
-    font-weight: 500;
+    color: #999;
+    font-size: 28px;
+    font-weight: 400;
     cursor: pointer;
-    transition: color 0.2s;
+    transition: all 0.2s;
     line-height: 1;
-    width: 32px;
-    height: 32px;
+    width: 36px;
+    height: 36px;
     display: flex;
     align-items: center;
     justify-content: center;
     border-radius: 6px;
+    background-color: transparent;
 }
 
 .close:hover {
-    background-color: #f5f5f5;
+    background-color: #f0f0f0;
     color: #333;
 }
 
 .modal-body {
-    padding: 24px;
+    padding: 32px;
 }
 
-/* ==================== FORM STYLES - Matching Card Design ==================== */
+.modal-footer {
+    padding: 20px 32px;
+    border-top: 1px solid #e0e0e0;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    background-color: #f8f9fa;
+    border-radius: 0 0 12px 12px;
+}
+
+/* ==================== DUPLICATE NOTIFICATION BADGE ==================== */
+.duplicate-notification {
+    display: none;
+    padding: 16px 24px;
+    margin: 0 24px -12px 24px;
+    background: #fff3cd;
+    border: 1.5px solid #ffc107;
+    border-radius: 8px;
+    border-top: 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    animation: slideDown 0.3s ease;
+}
+
+.duplicate-notification.show {
+    display: flex;
+}
+
+.notification-icon {
+    font-size: 1.2rem;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.notification-text {
+    color: #856404;
+    font-weight: 600;
+    font-size: 0.95rem;
+    flex: 1;
+}
+
+.notification-action {
+    color: #856404;
+    font-size: 0.85rem;
+    opacity: 0.85;
+    display: block;
+    margin-top: 4px;
+    width: 100%;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ==================== FORM STYLES - Improved Layout ==================== */
 #itemForm {
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 24px;
 }
 
 .form-row {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+}
+
+.form-row.full {
+    grid-template-columns: 1fr;
 }
 
 .form-group {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 10px;
 }
 
 .form-group.full-width {
@@ -1182,72 +1252,127 @@ body {
 }
 
 .form-group label {
-    font-size: 0.85rem;
+    font-size: 0.9rem;
     font-weight: 600;
+    color: #555;
+    text-transform: capitalize;
+    letter-spacing: 0.3px;
+}
+
+.form-group label .required {
+    color: #dc3545;
+    margin-left: 3px;
+}
+
+.form-control {
+    width: 100%;
+    padding: 14px 14px;
+    border: 1.5px solid #ddd;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    color: #333;
+    background-color: #fff;
+    transition: all 0.3s ease;
+    box-sizing: border-box;
+    font-family: inherit;
+}
+
+.form-control:hover {
+    border-color: #4e8a6a;
+    box-shadow: 0 2px 8px rgba(78, 138, 106, 0.05);
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: #4e8a6a;
+    box-shadow: 0 0 0 4px rgba(78, 138, 106, 0.1);
+    background-color: #fafafa;
+}
+
+.form-control::placeholder {
+    color: #aaa;
+}
+
+.form-control[type="text"],
+.form-control[type="number"],
+textarea.form-control {
+    background-color: #fff;
+}
+
+/* Dropdown styling - improved appearance */
+select.form-control {
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%234e8a6a'%3e%3cpath d='M2 5l6 6 6-6z'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 14px;
+    padding-right: 38px;
+    cursor: pointer;
+}
+
+select.form-control:hover {
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%234e8a6a'%3e%3cpath d='M2 5l6 6 6-6z'/%3e%3c/svg%3e");
+}
+
+textarea.form-control {
+    resize: vertical;
+    min-height: 100px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* ==================== STOCK FIELDS - Organized Layout ==================== */
+.stock-fields-group {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    padding: 24px;
+    background: linear-gradient(135deg, #f8f9fa 0%, #f5f6f7 100%);
+    border-radius: 10px;
+    border: 1px solid #e8e9eb;
+    margin-top: 8px;
+}
+
+.stock-field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.stock-field label {
+    font-size: 0.85rem;
+    font-weight: 700;
     color: #666;
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
 
-.form-control {
+.stock-field input[type="number"] {
     width: 100%;
-    padding: 12px 16px;
-    border: 1px solid #e0e0e0;
+    padding: 12px 14px;
+    border: 1.5px solid #ddd;
     border-radius: 8px;
-    font-size: 0.95rem;
+    font-size: 1rem;
+    font-weight: 600;
     color: #333;
     background-color: white;
-    transition: all 0.2s;
+    transition: all 0.3s ease;
     box-sizing: border-box;
 }
 
-.form-control:hover {
-    border-color: #999;
+.stock-field input[type="number"]:hover {
+    border-color: #4e8a6a;
 }
 
-.form-control:focus {
+.stock-field input[type="number"]:focus {
     outline: none;
-    border-color: #4CAF50;
-    box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+    border-color: #4e8a6a;
+    box-shadow: 0 0 0 4px rgba(78, 138, 106, 0.1);
 }
 
-/* Dropdown styling - matching your select style */
-select.form-control {
-    appearance: none;
-    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
-    background-repeat: no-repeat;
-    background-position: right 12px center;
-    background-size: 16px;
-    padding-right: 40px;
-}
-
-/* ==================== STOCK FIELDS - Matching Inventory Card Stock Controls ==================== */
-.stock-field {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    background: white;
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
-    padding: 4px;
-}
-
-.stock-field .form-control {
-    border: none;
-    padding: 8px 12px;
-    flex: 1;
-}
-
-.stock-field .form-control:focus {
-    box-shadow: none;
-    border: none;
-}
-
-.stock-field span {
-    color: #666;
-    font-size: 0.9rem;
-    padding-right: 12px;
-    min-width: 50px;
+.stock-field .form-hint {
+    font-size: 0.8rem;
+    color: #999;
+    font-weight: 500;
 }
 
 /* Matching the + and - buttons from your inventory cards */
@@ -1461,5 +1586,94 @@ textarea.form-control::placeholder {
     .btn {
         width: 100%;
         justify-content: center;
+    }
+}
+
+/* ==================== 🎯 ALIGNMENT FIXES - NO STYLE CHANGES ====================*/
+/* These classes ensure proper alignment without modifying existing styles */
+
+.align-center {
+    text-align: center;
+}
+
+.align-left {
+    text-align: left;
+}
+
+.align-right {
+    text-align: right;
+}
+
+.flex-center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.flex-between {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.flex-start {
+    display: flex;
+    align-items: flex-start;
+}
+
+.flex-end {
+    display: flex;
+    align-items: flex-end;
+}
+
+.gap-10 { gap: 10px; }
+.gap-15 { gap: 15px; }
+.gap-20 { gap: 20px; }
+
+.w-100 { width: 100%; }
+.w-auto { width: auto; }
+
+.h-auto { height: auto; }
+
+.overflow-hidden { overflow: hidden; }
+.overflow-auto { overflow: auto; }
+
+.mt-10 { margin-top: 10px; }
+.mt-20 { margin-top: 20px; }
+
+.mb-10 { margin-bottom: 10px; }
+.mb-20 { margin-bottom: 20px; }
+
+.p-10 { padding: 10px; }
+.p-20 { padding: 20px; }
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+    .sidebar {
+        width: 180px;
+    }
+    
+    .main-content {
+        margin-left: 180px;
+        padding: 15px;
+    }
+}
+
+@media (max-width: 480px) {
+    .sidebar {
+        width: 100%;
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 50px;
+        bottom: auto;
+        max-height: 180px;
+        overflow-y: auto;
+    }
+    
+    .main-content {
+        margin-left: 0;
+        margin-top: 240px;
+        padding: 10px;
     }
 }

@@ -42,6 +42,7 @@ const stockRequestSchema = new mongoose.Schema({
   fulfilledDate: Date,
   notes: String
 }, { 
+  collection: 'stockRequests',
   timestamps: true 
 });
 

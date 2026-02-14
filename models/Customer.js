@@ -41,6 +41,7 @@ const customerSchema = new mongoose.Schema({
     default: true
   }
 }, { 
+  collection: 'customers',
   timestamps: true 
 });
 

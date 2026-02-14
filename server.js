@@ -5,8 +5,10 @@ import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
 import path from "path";
 import { fileURLToPath } from 'url';
+import http from 'http';
 import mongoose from "mongoose";
 import { connectDB } from "./config/database.js";
+import { WebSocketServer } from "ws";
 
 // Import models
 import User from "./models/User.js";
@@ -20,6 +22,8 @@ import StockRequest from "./models/StockRequest.js";
 
 import stockTransferRoute from "./routes/stockTransferroute.js";
 import staffRoutes from "./routes/staffroute.js";
+import inventoryRoutes from "./routes/inventoryRoutes.js";
+import mongoDBInventoryService from "./services/mongoDBInventoryService.js";
 
 dotenv.config();
 
@@ -611,6 +615,23 @@ class RealTimeManager {
         });
     }
 
+    static sendOutOfStockAlert(productData) {
+        const outOfStockCount = Product.countDocuments({ stock: 0 }).then(count => count);
+        
+        this.broadcastToAdmins({
+            type: 'out_of_stock_alert',
+            data: {
+                productId: productData.productId,
+                productName: productData.productName,
+                category: productData.category,
+                previousStock: productData.previousStock,
+                timestamp: productData.timestamp
+            },
+            message: `🚨 OUT OF STOCK: ${productData.productName} is now completely out of stock! Please restock immediately.`,
+            severity: 'critical'
+        });
+    }
+
     static async sendStatsUpdate() {
         try {
             const stats = await DashboardStats.getStats();
@@ -692,6 +713,9 @@ const app = express();
 await connectDB();
 await initializeDatabase();
 
+// Initialize MongoDB Inventory Service
+await mongoDBInventoryService.initialize();
+
 // Middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
@@ -706,10 +730,12 @@ app.set('views', path.join(__dirname, 'views'));
 // Use routes
 app.use('/api/stock-transfers', stockTransferRoute);
 app.use('/api/staff', staffRoutes);
+// app.use('/api/inventory', inventoryRoutes);
 
 // Add authentication middleware
 app.use('/api/stock-transfers', verifyToken);
 app.use('/api/staff', verifyToken);
+// app.use('/api/inventory', verifyToken);
 
 // ==================== ROUTES ====================
 
@@ -1200,6 +1226,33 @@ app.get("/api/inventory/status", verifyToken, verifyAdmin, async (req, res) => {
     }
 });
 
+// ==================== GET OUT OF STOCK PRODUCTS ====================
+// Returns products that are completely out of stock (stock = 0)
+app.get("/api/products/out-of-stock", verifyToken, verifyAdmin, async (req, res) => {
+    try {
+        const outOfStockProducts = await Product.find({ stock: 0 })
+            .select('itemName category price image stock')
+            .sort({ updatedAt: -1 })
+            .lean();
+        
+        console.log(`🚨 Out of Stock Products: ${outOfStockProducts.length} items`);
+        
+        res.json({
+            success: true,
+            data: outOfStockProducts,
+            count: outOfStockProducts.length,
+            message: `${outOfStockProducts.length} product(s) out of stock`
+        });
+    } catch (error) {
+        console.error('❌ Error fetching out of stock products:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch out of stock products',
+            error: error.message
+        });
+    }
+});
+
 // ==================== GET ALL INVENTORY ITEMS (For Menu Management Availability Check) ====================
 // Returns ALL inventory items - used by menu management to check ingredient availability
 app.get("/api/inventory", verifyToken, async (req, res) => {
@@ -1567,12 +1620,75 @@ app.post('/api/orders', verifyToken, async (req, res) => {
         RealTimeManager.sendOrderNotification(savedOrder);
         RealTimeManager.sendStatsUpdate();
         
-        // Update inventory
+        // Update inventory - reduce product stock and raw ingredients
         for (const item of orderData.items) {
+            // 1️⃣ Reduce MenuItem stock (what staff sees in /api/menu)
+            // Frontend sends 'name' field, not 'itemName'
+            const itemName = item.itemName || item.name;
             const menuItem = await MenuItem.findOne({
-                itemName: { $regex: new RegExp(`^${item.itemName}$`, 'i') }
+                itemName: { $regex: new RegExp(`^${itemName}$`, 'i') }
             });
             
+            if (menuItem) {
+                const quantitySold = item.quantity || 1;
+                const previousStock = menuItem.currentStock || 0;
+                
+                menuItem.currentStock = Math.max(0, previousStock - quantitySold);
+                await menuItem.save();
+                
+                console.log(`📉 MenuItem stock reduced: ${item.itemName}`, {
+                    previousStock: previousStock,
+                    quantitySold: quantitySold,
+                    newStock: menuItem.currentStock,
+                    orderNumber: savedOrder.orderNumber
+                });
+                
+                // 🔴 NOTIFY ADMIN IF MENU ITEM GOES OUT OF STOCK
+                if (menuItem.currentStock === 0 && previousStock > 0) {
+                    console.log(`⚠️ ALERT: ${itemName} is now OUT OF STOCK!`);
+                    RealTimeManager.sendOutOfStockAlert({
+                        productId: menuItem._id,
+                        productName: itemName,
+                        category: menuItem.category,
+                        previousStock: previousStock,
+                        timestamp: new Date()
+                    });
+                }
+            }
+            
+            // 2️⃣ Reduce Product stock (finished goods backup)
+            const product = await Product.findOne({
+                itemName: { $regex: new RegExp(`^${itemName}$`, 'i') }
+            });
+            
+            if (product) {
+                const quantitySold = item.quantity || 1;
+                const previousStock = product.stock || 0;
+                
+                product.stock = Math.max(0, previousStock - quantitySold);
+                await product.save();
+                
+                console.log(`📉 Product stock reduced: ${itemName}`, {
+                    previousStock: previousStock,
+                    quantitySold: quantitySold,
+                    newStock: product.stock,
+                    orderNumber: savedOrder.orderNumber
+                });
+                
+                // 🔴 NOTIFY ADMIN IF STOCK REACHES ZERO
+                if (product.stock === 0 && previousStock > 0) {
+                    console.log(`⚠️ ALERT: ${itemName} is now OUT OF STOCK!`);
+                    RealTimeManager.sendOutOfStockAlert({
+                        productId: product._id,
+                        productName: product.itemName,
+                        category: product.category,
+                        previousStock: previousStock,
+                        timestamp: new Date()
+                    });
+                }
+            }
+            
+            // 3️⃣ Reduce raw ingredient inventory
             if (menuItem && menuItem.requiredIngredients && menuItem.requiredIngredients.length > 0) {
                 for (const ingredient of menuItem.requiredIngredients) {
                     const inventoryItem = await InventoryItem.findOne({
@@ -1587,7 +1703,7 @@ app.post('/api/orders', verifyToken, async (req, res) => {
                             inventoryItem.currentStock -= usageQuantity;
                             inventoryItem.usageHistory.push({
                                 quantity: usageQuantity,
-                                notes: `Used for ${item.quantity}x ${item.itemName} (Order: ${savedOrder.orderNumber})`,
+                                notes: `Used for ${item.quantity}x ${itemName} (Order: ${savedOrder.orderNumber})`,
                                 usedBy: req.user.username
                             });
                             
@@ -1883,6 +1999,20 @@ app.post('/api/inventory', verifyToken, verifyAdmin, async (req, res) => {
             });
         }
         
+        // ✅ CHECK FOR DUPLICATE ITEMS (SERVER-SIDE)
+        const existingItem = await InventoryItem.findOne({
+            itemName: { $regex: `^${itemName.trim()}$`, $options: 'i' }
+        });
+        
+        if (existingItem) {
+            console.warn(`⚠️ Duplicate ingredient detected: "${itemName}"`);
+            return res.status(409).json({
+                success: false,
+                message: `Ingredient "${itemName}" already exists in inventory`,
+                duplicate: true
+            });
+        }
+        
         const parsedCurrentStock = Number(currentStock) || 0;
         const parsedMinStock = Number(minStock) || 0;
         const parsedMaxStock = Number(maxStock) || 100;
@@ -1944,13 +2074,31 @@ app.put('/api/inventory/:itemId', verifyToken, verifyAdmin, async (req, res) => 
         console.log(`📦 API: Updating inventory item ${req.params.itemId}...`, JSON.stringify(req.body, null, 2));
         
         const { itemName, category, unit, currentStock, minStock, maxStock, itemType } = req.body;
+        const itemId = req.params.itemId;
+        
+        // ✅ CHECK FOR DUPLICATE ITEMS (excluding current item)
+        if (itemName) {
+            const existingItem = await InventoryItem.findOne({
+                _id: { $ne: itemId },
+                itemName: { $regex: `^${itemName.trim()}$`, $options: 'i' }
+            });
+            
+            if (existingItem) {
+                console.warn(`⚠️ Duplicate ingredient detected during edit: "${itemName}"`);
+                return res.status(409).json({
+                    success: false,
+                    message: `Another ingredient already has the name "${itemName}"`,
+                    duplicate: true
+                });
+            }
+        }
         
         const parsedCurrentStock = Number(currentStock) || 0;
         const parsedMinStock = Number(minStock) || 0;
         const parsedMaxStock = Number(maxStock) || 100;
         
         const inventoryItem = await InventoryItem.findByIdAndUpdate(
-            req.params.itemId,
+            itemId,
             {
                 itemName,
                 category,
@@ -2631,73 +2779,42 @@ app.post("/api/stock-requests", verifyToken, async (req, res) => {
     try {
         const { productId, productName, requestedQuantity, unit, priority, requestedBy, status } = req.body;
         
-        if (!productId || !productName || !requestedQuantity) {
+        if (!productName || !requestedQuantity) {
             return res.status(400).json({ 
                 success: false, 
-                message: "Missing required fields: productId, productName, requestedQuantity" 
+                message: "Missing required fields: productName, requestedQuantity" 
             });
         }
         
-        let finalProductId = productId;
+        // ==================== FAST PATH: Use productName as unique identifier ====================
+        // Check for existing pending request by productName (much faster than searching by ID)
+        const existingPendingRequest = await StockRequest.findOne({
+            productName: productName,
+            status: 'pending'
+        });
         
-        // If productId is a temporary ID (starts with 'temp_'), try to find the real product by name
-        if (!mongoose.Types.ObjectId.isValid(productId)) {
-            console.log(`⚠️ Temporary ID detected: ${productId}. Attempting to find product by name: ${productName}`);
+        if (existingPendingRequest) {
+            // Allow re-requesting if the existing request is older than 24 hours
+            const hoursOld = (Date.now() - new Date(existingPendingRequest.requestDate)) / (1000 * 60 * 60);
             
-            // Try to find the product in the Product collection by name
-            const existingProduct = await Product.findOne({ name: productName });
-            
-            if (existingProduct) {
-                finalProductId = existingProduct._id;
-                console.log(`✅ Found product in database: ${productName} with ID: ${finalProductId}`);
+            if (hoursOld < 24) {
+                console.log(`⚠️ Stock request already pending for: ${productName} (${hoursOld.toFixed(1)} hours old)`);
+                return res.status(409).json({
+                    success: false,
+                    message: `A stock request for ${productName} is already pending (${Math.ceil(hoursOld)} hours old).`,
+                    existingRequest: existingPendingRequest,
+                    hoursOld: hoursOld
+                });
             } else {
-                console.log(`⚠️ Product not found in database: ${productName}. Creating stock request with product name only.`);
-                // Create stock request without productId reference - will use productName as reference
-                const stockRequest = new StockRequest({
-                    productId: null,  // No reference ID, will use productName
-                    productName: productName,
-                    requestedQuantity: requestedQuantity,
-                    unit: unit || 'units',
-                    priority: priority || 'medium',
-                    requestedBy: requestedBy || 'staff',
-                    status: status || 'pending',
-                    requestDate: new Date()
-                });
-                
-                // Update schema to allow null productId for fallback mode
-                await stockRequest.save();
-                
-                console.log(`✅ Stock request created (fallback mode): ${productName} x${requestedQuantity}`);
-                
-                // Broadcast notification
-                const notification = {
-                    type: 'stock_request',
-                    title: `📦 Stock Request from Staff`,
-                    message: `Staff requested ${requestedQuantity} ${unit} of ${productName}`,
-                    productName: productName,
-                    requestedQuantity: requestedQuantity,
-                    unit: unit,
-                    priority: priority,
-                    status: 'pending',
-                    requestId: stockRequest._id,
-                    timestamp: new Date(),
-                    data: stockRequest
-                };
-                
-                RealTimeManager.broadcastToAdmins(notification);
-                console.log(`📢 Notification broadcasted: Stock request for ${productName}`);
-                
-                return res.status(201).json({
-                    success: true,
-                    message: "Stock request submitted successfully",
-                    data: stockRequest
-                });
+                // Auto-remove stale pending request (> 24 hours old)
+                console.log(`🗑️ Removing stale stock request for: ${productName} (${hoursOld.toFixed(1)} hours old)`);
+                await StockRequest.deleteOne({ _id: existingPendingRequest._id });
             }
         }
         
         // Create stock request with valid productId
         const stockRequest = new StockRequest({
-            productId: finalProductId,
+            productId: productId || productName,
             productName: productName,
             requestedQuantity: requestedQuantity,
             unit: unit || 'units',
@@ -2740,6 +2857,195 @@ app.post("/api/stock-requests", verifyToken, async (req, res) => {
         res.status(500).json({
             success: false,
             message: "Failed to create stock request",
+            error: error.message
+        });
+    }
+});
+
+// ==================== ✅ FULFILL STOCK REQUEST ====================
+app.post("/api/stock-requests/fulfill", verifyToken, verifyAdmin, async (req, res) => {
+    try {
+        const { notificationId, productId, productName, quantity, unit, newStock } = req.body;
+        
+        console.log(`\n📦 ========== FULFILLING STOCK REQUEST ==========`);
+        console.log(`Product: ${productName}`);
+        console.log(`Quantity: ${quantity} ${unit}`);
+        console.log(`New Stock: ${newStock}`);
+        console.log(`================================================\n`);
+        
+        // Validation
+        if (!productName || !quantity || quantity <= 0) {
+            console.error(`❌ Validation failed: Invalid productName or quantity`);
+            return res.status(400).json({
+                success: false,
+                message: 'productName and quantity (>0) are required'
+            });
+        }
+        
+        // Find the stock request by product name
+        const stockRequest = await StockRequest.findOne({
+            productName: productName,
+            status: 'pending'
+        });
+        
+        if (!stockRequest) {
+            console.error(`❌ Stock request not found for: ${productName}`);
+            return res.status(404).json({
+                success: false,
+                message: `No pending stock request found for ${productName}`
+            });
+        }
+        
+        // Update the stock request status
+        stockRequest.status = 'fulfilled';
+        stockRequest.fulfilledDate = new Date();
+        stockRequest.fulfilledQuantity = quantity;
+        
+        await stockRequest.save();
+        console.log(`✅ Stock request marked as fulfilled`);
+        
+        // Try to update menu item stock (if it exists)
+        try {
+            const MenuItem = require('./models/Menuitem');
+            const menuItem = await MenuItem.findOne({
+                $or: [
+                    { name: productName },
+                    { itemName: productName },
+                    { _id: productId }
+                ]
+            });
+            
+            if (menuItem) {
+                const oldStock = menuItem.currentStock || 0;
+                menuItem.currentStock = newStock;
+                await menuItem.save();
+                console.log(`✅ Updated menu item stock: ${oldStock} → ${newStock}`);
+            }
+        } catch (menuUpdateError) {
+            console.warn(`⚠️ Could not update menu item stock (may not exist):`, menuUpdateError.message);
+        }
+        
+        res.status(200).json({
+            success: true,
+            message: `Stock request fulfilled successfully`,
+            data: {
+                productName: productName,
+                quantity: quantity,
+                unit: unit,
+                newStock: newStock,
+                fulfilledDate: stockRequest.fulfilledDate
+            }
+        });
+        
+    } catch (error) {
+        console.error("Error fulfilling stock request:", error);
+        res.status(500).json({
+            success: false,
+            message: "Failed to fulfill stock request",
+            error: error.message
+        });
+    }
+});
+
+// ==================== 🔧 ADMIN DEBUG: Clear old pending stock requests ====================
+app.delete("/api/stock-requests/clear-old-pending", verifyToken, verifyAdmin, async (req, res) => {
+    try {
+        const result = await StockRequest.deleteMany({
+            status: 'pending',
+            requestDate: { $lt: new Date(Date.now() - 24 * 60 * 60 * 1000) } // Older than 24 hours
+        });
+        
+        res.status(200).json({
+            success: true,
+            message: `Cleared ${result.deletedCount} old pending stock requests`,
+            deletedCount: result.deletedCount
+        });
+    } catch (error) {
+        console.error("Error clearing old pending requests:", error);
+        res.status(500).json({
+            success: false,
+            message: "Failed to clear old pending requests",
+            error: error.message
+        });
+    }
+});
+
+// ==================== 🔧 ADMIN DEBUG: Clear ALL pending stock requests ====================
+app.delete("/api/stock-requests/clear-all-pending", verifyToken, verifyAdmin, async (req, res) => {
+    try {
+        const result = await StockRequest.deleteMany({
+            status: 'pending'
+        });
+        
+        console.log(`🗑️ Cleared all ${result.deletedCount} pending stock requests`);
+        
+        res.status(200).json({
+            success: true,
+            message: `Cleared all ${result.deletedCount} pending stock requests`,
+            deletedCount: result.deletedCount
+        });
+    } catch (error) {
+        console.error("Error clearing all pending requests:", error);
+        res.status(500).json({
+            success: false,
+            message: "Failed to clear all pending requests",
+            error: error.message
+        });
+    }
+});
+
+// ==================== 🔧 ADMIN DEBUG: Get all pending requests ====================
+app.get("/api/stock-requests/debug/pending-list", async (req, res) => {
+    try {
+        const pendingRequests = await StockRequest.find({ status: 'pending' }).sort({ requestDate: -1 });
+        
+        res.status(200).json({
+            success: true,
+            count: pendingRequests.length,
+            requests: pendingRequests.map(req => ({
+                id: req._id,
+                productName: req.productName,
+                quantity: req.requestedQuantity,
+                requestedAt: req.requestDate,
+                hoursOld: ((Date.now() - new Date(req.requestDate)) / (1000 * 60 * 60)).toFixed(1)
+            }))
+        });
+    } catch (error) {
+        console.error("Error fetching pending requests:", error);
+        res.status(500).json({
+            success: false,
+            message: "Failed to fetch pending requests",
+            error: error.message
+        });
+    }
+});
+
+// ==================== 🔧 ADMIN DEBUG: Delete specific pending request ====================
+app.delete("/api/stock-requests/debug/pending/:productName", async (req, res) => {
+    try {
+        const result = await StockRequest.deleteOne({
+            productName: req.params.productName,
+            status: 'pending'
+        });
+        
+        if (result.deletedCount === 0) {
+            return res.status(404).json({
+                success: false,
+                message: `No pending request found for ${req.params.productName}`
+            });
+        }
+        
+        console.log(`🗑️ Deleted pending request for: ${req.params.productName}`);
+        
+        res.status(200).json({
+            success: true,
+            message: `Deleted pending request for ${req.params.productName}`
+        });
+    } catch (error) {
+        console.error("Error deleting pending request:", error);
+        res.status(500).json({
+            success: false,
+            message: "Failed to delete pending request",
             error: error.message
         });
     }
@@ -2813,6 +3119,24 @@ app.put("/api/stock-requests/:id", verifyToken, verifyAdmin, async (req, res) =>
         
         console.log(`✅ Stock request updated: ${stockRequest.productName} - Status: ${status}`);
         
+        // ==================== BROADCAST TO STAFF IF FULFILLED ====================
+        if (status === 'fulfilled') {
+            const notification = {
+                type: 'stock_request_fulfilled',
+                title: `✅ Stock Request Fulfilled`,
+                message: `Your request for ${stockRequest.productName} has been fulfilled!`,
+                productName: stockRequest.productName,
+                productId: stockRequest.productId,
+                requestId: stockRequest._id,
+                fulfilledQuantity: fulfilledQuantity || stockRequest.requestedQuantity,
+                timestamp: new Date()
+            };
+            
+            // Broadcast to all staff connections
+            RealTimeManager.broadcastToStaff(notification);
+            console.log(`📢 Fulfillment notification broadcasted: ${stockRequest.productName}`);
+        }
+        
         res.status(200).json({
             success: true,
             message: "Stock request updated successfully",
@@ -2863,17 +3187,118 @@ app.get('/images/default_food.jpg', (req, res) => {
 
 app.get("/logout", (req, res) => {
     res.clearCookie("token");
-    res.redirect("/login");
+    // Redirect with logout parameter so client can clear sessionStorage
+    res.redirect("/login?logout=true");
 });
 
 app.get('/login', (req, res) => {
     res.render('login', { businessInfo: BUSINESS_INFO });
 });
 
-// Redirect root to login
+// ==================== 🔐 ROOT ROUTE - SMART REDIRECT ====================
+// Redirect root to appropriate dashboard or login based on JWT token
 app.get('/', (req, res) => {
-    res.redirect('/login');
+    const token = req.cookies.token;
+    
+    if (!token) {
+        // No token, send to login
+        return res.redirect('/login');
+    }
+    
+    try {
+        // Verify the token
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        
+        // Token is valid, redirect to appropriate dashboard based on role
+        if (decoded.role === 'admin') {
+            return res.redirect('/admindashboard/dashboard');
+        } else {
+            return res.redirect('/staffdashboard');
+        }
+    } catch (error) {
+        // Token is invalid or expired, send to login
+        res.clearCookie("token");
+        return res.redirect('/login');
+    }
 });
+
+
+// ==================== STORE CONNECTED STAFF CLIENTS ====================
+let staffClients = [];
+
+// ==================== ADMIN EMIT STOCK TRANSFER ENDPOINT ====================
+
+// ==================== NOTIFY ADMIN OF OUT OF STOCK ====================
+app.post('/api/admin/notify-out-of-stock', verifyToken, async (req, res) => {
+    try {
+        const { productName, productId, timestamp, notifiedFrom } = req.body;
+        
+        console.log(`🚨 OUT OF STOCK NOTIFICATION: ${productName} (ID: ${productId})`);
+        console.log(`   Notified by: ${notifiedFrom}`);
+        console.log(`   Timestamp: ${timestamp}`);
+        
+        // Broadcast notification to all admin clients
+        const notification = {
+            type: 'out_of_stock_alert',
+            severity: 'critical',
+            productName: productName,
+            productId: productId,
+            message: `🚨 ${productName} is OUT OF STOCK!`,
+            timestamp: timestamp,
+            notifiedFrom: notifiedFrom
+        };
+        
+        RealTimeManager.broadcastToAdmins(notification);
+        
+        res.json({
+            success: true,
+            message: `Notification sent to admins about ${productName}`,
+            notification: notification
+        });
+    } catch (error) {
+        console.error('❌ Error sending out of stock notification:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error sending notification',
+            error: error.message
+        });
+    }
+});
+
+// ==================== STAFF INVENTORY RECEIVE ENDPOINT ====================
+app.post('/api/staff/inventory/receive', async (req, res) => {
+    try {
+        const transferData = req.body;
+        console.log('📦 Direct staff inventory update:', transferData);
+        
+        // Here you would update your database
+        // This is a direct API call to update staff inventory
+        
+        // Also broadcast to SSE clients
+        let sentCount = 0;
+        staffClients.forEach(client => {
+            try {
+                client.res.write(`data: ${JSON.stringify(transferData)}\n\n`);
+                sentCount++;
+            } catch (e) {
+                console.error(`❌ Error sending to client ${client.id}:`, e);
+            }
+        });
+        
+        res.json({ 
+            success: true, 
+            message: 'Staff inventory updated',
+            clientsNotified: sentCount
+        });
+    } catch (error) {
+        console.error('❌ Error updating staff inventory:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// ==================== WEBSOCKET SERVER SETUP ====================
+// Note: WebSocketServer will be attached to HTTP server after it's created
+// (See server startup section at the end of the file)
 
 // ==================== EMIT STOCK TRANSFER EVENT TO STAFF ====================
 app.post('/api/admin/emit-stock-transfer', async (req, res) => {
@@ -2881,24 +3306,24 @@ app.post('/api/admin/emit-stock-transfer', async (req, res) => {
         const transferData = req.body;
         console.log('📡 Emitting stock transfer event to staff:', transferData);
         
-        // Emit event to all connected staff clients
-        if (global.staffEventSource && global.staffEventSource.emit) {
-            global.staffEventSource.emit('message', {
-                type: 'stock_transfer',
-                action: 'stock_received',
-                ...transferData
-            });
-        }
+        // Create notification object
+        const notification = {
+            type: 'stock_transfer',
+            action: 'stock_received',
+            itemName: transferData.itemName,
+            itemId: transferData.itemId,
+            quantitySent: transferData.quantitySent,
+            unit: transferData.unit,
+            newStaffStock: transferData.newStaffStock,
+            timestamp: transferData.timestamp,
+            transferredBy: transferData.transferredBy
+        };
         
-        // Also broadcast via WebSocket if you're using it
-        if (global.io) {
-            global.io.to('staff').emit('stock_transfer', transferData);
-        }
+        // ==================== BROADCAST TO ALL STAFF CLIENTS VIA SSE ====================
+        RealTimeManager.broadcastToStaff(notification);
+        console.log(`✅ Stock transfer broadcasted to all staff: ${transferData.itemName} x${transferData.quantitySent}`);
         
-        // You can also store this in a notifications table
-        // await Notification.create({ ... });
-        
-        res.json({ success: true, message: 'Event emitted successfully' });
+        res.json({ success: true, message: 'Stock transfer event emitted successfully' });
     } catch (error) {
         console.error('❌ Error emitting stock transfer event:', error);
         res.status(500).json({ success: false, error: error.message });
@@ -2906,6 +3331,48 @@ app.post('/api/admin/emit-stock-transfer', async (req, res) => {
 });
 
 // ==================== START SERVER ====================
-app.listen(CONFIG.SERVER_PORT, () => {
+const server = http.createServer(app);
+
+// Attach WebSocket to the HTTP server
+const wss = new WebSocketServer({ server, path: '/ws' });
+
+// Store connected staff WebSocket clients
+const staffWebSocketConnections = new Set();
+
+wss.on('connection', (ws, req) => {
+    const url = req.url;
+    
+    if (url.includes('/ws/staff')) {
+        // Staff WebSocket connection
+        staffWebSocketConnections.add(ws);
+        console.log(`✅ Staff WebSocket connected. Total: ${staffWebSocketConnections.size}`);
+        
+        ws.on('message', (message) => {
+            try {
+                const data = JSON.parse(message);
+                console.log('📨 WebSocket message from staff:', data);
+            } catch (e) {
+                console.error('Error parsing WebSocket message:', e);
+            }
+        });
+        
+        ws.on('close', () => {
+            staffWebSocketConnections.delete(ws);
+            console.log(`❌ Staff WebSocket disconnected. Total: ${staffWebSocketConnections.size}`);
+        });
+    }
+    
+    if (url.includes('/ws/admin')) {
+        // Admin WebSocket connection
+        console.log('✅ Admin WebSocket connected');
+        
+        ws.on('close', () => {
+            console.log('❌ Admin WebSocket disconnected');
+        });
+    }
+});
+
+server.listen(CONFIG.SERVER_PORT, () => {
     console.log(`✅ Server is running at http://localhost:${CONFIG.SERVER_PORT}`);
+    console.log(`✅ WebSocket server running on ws://localhost:${CONFIG.SERVER_PORT}/ws`);
 });

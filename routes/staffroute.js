@@ -273,4 +273,61 @@ router.delete('/inventory/:id', async (req, res) => {
     }
 });
 
+// Reduce inventory after order is placed
+router.post('/inventory-reduction', async (req, res) => {
+    try {
+        const { productReductions, servingwareReductions, ingredientReductions, orderId, timestamp } = req.body;
+        
+        if (!productReductions || productReductions.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'No product reductions provided'
+            });
+        }
+
+        // Update each product's stock in the database
+        const updateResults = [];
+        for (const reduction of productReductions) {
+            const updated = await InventoryItem.findByIdAndUpdate(
+                reduction.productId,
+                { currentStock: reduction.newStock },
+                { new: true }
+            );
+            
+            if (updated) {
+                updateResults.push({
+                    productId: reduction.productId,
+                    productName: reduction.productName,
+                    oldStock: reduction.oldStock,
+                    newStock: reduction.newStock,
+                    quantitySold: reduction.quantitySold,
+                    updated: true
+                });
+            } else {
+                updateResults.push({
+                    productId: reduction.productId,
+                    productName: reduction.productName,
+                    updated: false,
+                    message: 'Product not found in database'
+                });
+            }
+        }
+
+        res.json({
+            success: true,
+            message: 'Inventory reduction recorded successfully',
+            orderId: orderId,
+            timestamp: timestamp,
+            updates: updateResults
+        });
+    } catch (error) {
+        console.error('Error reducing inventory after order:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error reducing inventory after order',
+            error: error.message
+        });
+    }
+});
+
 export default router;

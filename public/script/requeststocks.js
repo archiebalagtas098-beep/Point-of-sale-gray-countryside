@@ -159,6 +159,26 @@ function renderProductsTable(products) {
         const isSelected = selectedRequests[key] !== undefined;
         const quantity = isSelected ? selectedRequests[key].quantity : 0;
         
+        // Determine stock status
+        const currentStock = product.stock || product.currentStock || 0;
+        const maxStock = product.maxStock || 100;
+        let statusBadge = '';
+        let statusClass = '';
+        
+        if (currentStock === 0) {
+            statusBadge = 'Out of Stock';
+            statusClass = 'status-out';
+        } else if (currentStock <= 20) {
+            statusBadge = `Low Stock (${currentStock}/${maxStock})`;
+            statusClass = 'status-low';
+        } else if (currentStock >= maxStock) {
+            statusBadge = `Full (${currentStock}/${maxStock})`;
+            statusClass = 'status-good';
+        } else {
+            statusBadge = `In Stock (${currentStock}/${maxStock})`;
+            statusClass = 'status-good';
+        }
+        
         html += `
             <tr class="product-row ${isSelected ? 'row-selected' : ''}" id="row-${key}">
                 <td>
@@ -170,7 +190,7 @@ function renderProductsTable(products) {
                 <td>${product.category}</td>
                 <td>${product.category} - ${product.name}</td>
                 <td>${product.unit}</td>
-                <td><span class="status-badge status-out-of-stock">Out of Stock</span></td>
+                <td><span class="status-badge ${statusClass}">${statusBadge}</span></td>
                 <td>
                     <input type="number" class="quantity-input" data-key="${key}" 
                            value="${quantity}" min="0" step="1" 
@@ -318,7 +338,7 @@ function updateBulkUI() {
     }
 }
 
-// Submit single request
+// Submit single request with timeout
 async function submitSingleRequest(key) {
     const product = allProducts.find(p => p.name === key);
     const row = document.getElementById(`row-${key}`);
@@ -330,13 +350,23 @@ async function submitSingleRequest(key) {
         return;
     }
     
+    const btn = row.querySelector('.btn-request');
+    const originalText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = '⏳ Sending...';
+    
     try {
+        // Create abort controller for timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+        
         const response = await fetch(`${BACKEND_URL}/api/stock-requests`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
             credentials: 'include',
+            signal: controller.signal,
             body: JSON.stringify({
                 productId: product.id || key,
                 productName: key,
@@ -348,6 +378,10 @@ async function submitSingleRequest(key) {
             })
         });
         
+        clearTimeout(timeoutId);
+        
+        const data = await response.json();
+        
         if (response.ok) {
             showNotification(`✓ Request submitted for ${key} (${quantity} ${product.unit})`, 'success');
             // Clear the row
@@ -356,16 +390,30 @@ async function submitSingleRequest(key) {
             delete selectedRequests[key];
             row.classList.remove('row-selected');
             updateBulkUI();
+        } else if (response.status === 409) {
+            // Conflict: Request already pending - show details
+            const hoursOld = data.hoursOld || 0;
+            const message = hoursOld < 1 ? 
+                `Request already pending (just submitted). Please wait before re-requesting.` :
+                `Request already pending for ${Math.ceil(hoursOld)} hours. Please contact admin if stuck.`;
+            showNotification(message, 'warning');
         } else {
-            alert('Failed to submit request');
+            showNotification(`Failed: ${data.message || 'Unable to submit request'}`, 'error');
         }
     } catch (error) {
-        console.error('Error submitting request:', error);
-        alert('Error submitting request');
+        if (error.name === 'AbortError') {
+            showNotification('Request timeout - server not responding', 'error');
+        } else {
+            console.error('Error submitting request:', error);
+            showNotification('Error submitting request', 'error');
+        }
+    } finally {
+        btn.textContent = originalText;
+        btn.disabled = false;
     }
 }
 
-// Submit all selected requests
+// Submit all selected requests with timeout handling
 async function submitBulkRequests() {
     const btn = document.getElementById('submitAllBtn');
     const originalText = btn.textContent;
@@ -374,18 +422,24 @@ async function submitBulkRequests() {
     
     let successCount = 0;
     let failureCount = 0;
+    let timeoutCount = 0;
     
     try {
         for (const [productName, requestData] of Object.entries(selectedRequests)) {
             const product = allProducts.find(p => p.name === productName);
             
             try {
+                // Create abort controller for timeout
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout per request
+                
                 const response = await fetch(`${BACKEND_URL}/api/stock-requests`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
                     credentials: 'include',
+                    signal: controller.signal,
                     body: JSON.stringify({
                         productId: product?.id || productName,
                         productName: productName,
@@ -397,14 +451,21 @@ async function submitBulkRequests() {
                     })
                 });
                 
+                clearTimeout(timeoutId);
+                
                 if (response.ok) {
                     successCount++;
                 } else {
                     failureCount++;
                 }
             } catch (error) {
-                console.error(`Error submitting request for ${productName}:`, error);
-                failureCount++;
+                if (error.name === 'AbortError') {
+                    console.warn(`Request timeout for ${productName}`);
+                    timeoutCount++;
+                } else {
+                    console.error(`Error submitting request for ${productName}:`, error);
+                    failureCount++;
+                }
             }
         }
         
@@ -413,11 +474,16 @@ async function submitBulkRequests() {
         if (failureCount > 0) {
             message += ` (${failureCount} failed)`;
         }
+        if (timeoutCount > 0) {
+            message += ` (${timeoutCount} timeout)`;
+        }
         
         showNotification(message, successCount > 0 ? 'success' : 'error');
         
-        // Clear all selections
-        clearAllSelections();
+        // Clear all selections only if all successful
+        if (failureCount === 0 && timeoutCount === 0) {
+            clearAllSelections();
+        }
         
     } catch (error) {
         console.error('Error submitting bulk requests:', error);

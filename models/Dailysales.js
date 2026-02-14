@@ -104,8 +104,9 @@ const dailySalesSchema = new mongoose.Schema({
     type: Date,
     default: Date.now
   }
-}, {
-  timestamps: true
+}, { 
+  collection: 'dailySales',
+  timestamps: true 
 });
 
 

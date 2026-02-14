@@ -8,12 +8,35 @@ const router = express.Router();
 // Staff requests stock from inventory
 router.post('/request-stock', async (req, res) => {
     try {
+        console.log('📦 API: Stock request received:', req.body);
+        
         const { menuItemId, quantity, notes } = req.body;
         const staffId = req.user._id; // From auth middleware
         
+        // Validation
+        if (!menuItemId || !quantity) {
+            console.warn('⚠️ Missing required fields: menuItemId or quantity');
+            return res.status(400).json({
+                success: false,
+                message: 'menuItemId and quantity are required'
+            });
+        }
+        
+        if (quantity <= 0) {
+            console.warn('⚠️ Invalid quantity:', quantity);
+            return res.status(400).json({
+                success: false,
+                message: 'Quantity must be greater than 0'
+            });
+        }
+        
         const menuItem = await MenuItem.findById(menuItemId);
         if (!menuItem) {
-            return res.status(404).json({ success: false, message: 'Menu item not found' });
+            console.error(`❌ Menu item not found: ${menuItemId}`);
+            return res.status(404).json({
+                success: false,
+                message: 'Menu item not found'
+            });
         }
         
         const transfer = new StockTransfer({
@@ -28,37 +51,76 @@ router.post('/request-stock', async (req, res) => {
         
         await transfer.save();
         
-        // Emit real-time notification (if using Socket.io)
-        // io.emit('new_stock_request', { transfer, staff: req.user.name });
+        console.log(`✅ Stock request created: ${transfer._id} for ${menuItem.name} x${quantity}`);
         
-        res.json({
+        res.status(201).json({
             success: true,
-            message: 'Stock request submitted',
-            transfer: transfer
+            message: 'Stock request submitted successfully',
+            transfer: {
+                _id: transfer._id,
+                menuItemName: transfer.menuItemName,
+                quantity: transfer.quantity,
+                status: transfer.status,
+                createdAt: transfer.createdAt
+            }
         });
         
     } catch (error) {
-        console.error('Error requesting stock:', error);
-        res.status(500).json({ success: false, message: 'Server error' });
+        console.error('❌ Error requesting stock:', error.message);
+        console.error('❌ Stack:', error.stack);
+        res.status(500).json({
+            success: false,
+            message: 'Error creating stock request',
+            error: error.message
+        });
     }
 });
 
 // Manager sends stock to staff
 router.post('/send-to-staff', async (req, res) => {
     try {
+        console.log('📤 API: Sending stock to staff:', req.body);
+        
         const { menuItemId, quantity, staffId, notes } = req.body;
+        
+        // Validation
+        if (!menuItemId || !quantity || !staffId) {
+            console.warn('⚠️ Missing required fields');
+            return res.status(400).json({
+                success: false,
+                message: 'menuItemId, quantity, and staffId are required'
+            });
+        }
+        
+        if (quantity <= 0) {
+            console.warn('⚠️ Invalid quantity:', quantity);
+            return res.status(400).json({
+                success: false,
+                message: 'Quantity must be greater than 0'
+            });
+        }
         
         const menuItem = await MenuItem.findById(menuItemId);
         if (!menuItem) {
-            return res.status(404).json({ success: false, message: 'Menu item not found' });
+            console.error(`❌ Menu item not found: ${menuItemId}`);
+            return res.status(404).json({
+                success: false,
+                message: 'Menu item not found'
+            });
         }
         
         if (menuItem.currentStock < quantity) {
-            return res.status(400).json({
+            console.warn(`⚠️ Insufficient stock for ${menuItem.name}. Available: ${menuItem.currentStock}, Requested: ${quantity}`);
+            return res.status(409).json({
                 success: false,
-                message: `Insufficient stock. Available: ${menuItem.currentStock}`
+                message: `Insufficient stock. Available: ${menuItem.currentStock}, Requested: ${quantity}`,
+                available: menuItem.currentStock,
+                requested: quantity
             });
         }
+        
+        // Record previous stock
+        const previousStock = menuItem.currentStock;
         
         // Update menu item stock
         menuItem.currentStock -= quantity;
@@ -70,7 +132,7 @@ router.post('/send-to-staff', async (req, res) => {
             menuItemId: menuItemId,
             menuItemName: menuItem.name,
             quantity: quantity,
-            previousStock: menuItem.currentStock + quantity,
+            previousStock: previousStock,
             newStock: menuItem.currentStock,
             status: 'completed',
             notes: notes || `Stock transfer to staff`
@@ -78,102 +140,137 @@ router.post('/send-to-staff', async (req, res) => {
         
         await transfer.save();
         
-        res.json({
+        console.log(`✅ Stock transferred: ${menuItem.name} x${quantity} (${previousStock} → ${menuItem.currentStock})`);
+        
+        res.status(201).json({
             success: true,
-            message: 'Stock transferred to staff',
-            transfer: transfer
+            message: 'Stock transferred to staff successfully',
+            transfer: {
+                _id: transfer._id,
+                menuItemName: transfer.menuItemName,
+                quantity: transfer.quantity,
+                previousStock: previousStock,
+                newStock: menuItem.currentStock,
+                status: transfer.status,
+                completedAt: transfer.createdAt
+            }
         });
         
     } catch (error) {
-        console.error('Error sending stock to staff:', error);
-        res.status(500).json({ success: false, message: 'Server error' });
+        console.error('❌ Error sending stock to staff:', error.message);
+        console.error('❌ Stack:', error.stack);
+        res.status(500).json({
+            success: false,
+            message: 'Error transferring stock',
+            error: error.message
+        });
     }
 });
 
 // Get all pending requests (for manager)
 router.get('/pending-requests', async (req, res) => {
     try {
+        console.log('📋 API: Fetching pending stock requests');
+        
         const requests = await StockTransfer.find({ status: 'pending' })
             .sort({ createdAt: -1 })
-            .populate('staffId', 'name email');
+            .populate('staffId', 'name email')
+            .lean();
+        
+        console.log(`✅ Found ${requests.length} pending requests`);
         
         res.json({
             success: true,
-            requests: requests
+            data: requests,
+            count: requests.length
         });
+        
     } catch (error) {
-        console.error('Error fetching pending requests:', error);
-        res.status(500).json({ success: false, message: 'Server error' });
+        console.error('❌ Error fetching pending requests:', error.message);
+        res.status(500).json({
+            success: false,
+            message: 'Error fetching pending requests',
+            error: error.message
+        });
     }
 });
 
-// Update request status (approve/reject)
-router.put('/update-request/:id', async (req, res) => {
+// Approve/Reject request
+router.put('/request/:requestId', async (req, res) => {
     try {
-        const { id } = req.params;
+        console.log(`📝 API: Updating request ${req.params.requestId}:`, req.body);
+        
+        const { requestId } = req.params;
         const { status, notes } = req.body;
         
-        const transfer = await StockTransfer.findById(id);
+        if (!status || !['approved', 'rejected'].includes(status)) {
+            console.warn('⚠️ Invalid status:', status);
+            return res.status(400).json({
+                success: false,
+                message: 'Status must be either "approved" or "rejected"'
+            });
+        }
+        
+        const transfer = await StockTransfer.findByIdAndUpdate(
+            requestId,
+            {
+                status: status,
+                notes: notes || transfer.notes
+            },
+            { new: true }
+        );
+        
         if (!transfer) {
-            return res.status(404).json({ success: false, message: 'Transfer not found' });
+            console.error(`❌ Request not found: ${requestId}`);
+            return res.status(404).json({
+                success: false,
+                message: 'Request not found'
+            });
         }
         
-        if (status === 'approved') {
-            const menuItem = await MenuItem.findById(transfer.menuItemId);
-            if (!menuItem) {
-                return res.status(404).json({ success: false, message: 'Menu item not found' });
-            }
-            
-            if (menuItem.currentStock < transfer.quantity) {
-                return res.status(400).json({
-                    success: false,
-                    message: `Insufficient stock. Available: ${menuItem.currentStock}`
-                });
-            }
-            
-            // Update menu item stock
-            menuItem.currentStock -= transfer.quantity;
-            await menuItem.save();
-            
-            transfer.previousStock = menuItem.currentStock + transfer.quantity;
-            transfer.newStock = menuItem.currentStock;
-        }
-        
-        transfer.status = status;
-        transfer.managerNotes = notes || '';
-        transfer.processedAt = new Date();
-        transfer.processedBy = req.user._id;
-        
-        await transfer.save();
+        console.log(`✅ Request ${requestId} updated to status: ${status}`);
         
         res.json({
             success: true,
-            message: `Request ${status}`,
+            message: `Request ${status} successfully`,
             transfer: transfer
         });
         
     } catch (error) {
-        console.error('Error updating request:', error);
-        res.status(500).json({ success: false, message: 'Server error' });
+        console.error('❌ Error updating request:', error.message);
+        res.status(500).json({
+            success: false,
+            message: 'Error updating request',
+            error: error.message
+        });
     }
 });
 
-// Get staff's stock transfers
-router.get('/staff-transfers', async (req, res) => {
+// Get transfer history
+router.get('/history', async (req, res) => {
     try {
-        const staffId = req.user._id;
+        console.log('📊 API: Fetching stock transfer history');
         
-        const transfers = await StockTransfer.find({ staffId: staffId })
+        const transfers = await StockTransfer.find({})
             .sort({ createdAt: -1 })
-            .limit(50);
+            .limit(100)
+            .lean();
+        
+        console.log(`✅ Found ${transfers.length} transfer records`);
         
         res.json({
             success: true,
-            transfers: transfers
+            data: transfers,
+            count: transfers.length
         });
+        
     } catch (error) {
-        console.error('Error fetching staff transfers:', error);
-        res.status(500).json({ success: false, message: 'Server error' });
+        console.error('❌ Error fetching transfer history:', error.message);
+        res.status(500).json({
+            success: false,
+            message: 'Error fetching transfer history',
+            error: error.message
+        });
     }
 });
 

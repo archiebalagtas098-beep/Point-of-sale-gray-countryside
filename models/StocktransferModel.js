@@ -46,6 +46,7 @@ const stockTransferSchema = new mongoose.Schema({
         ref: 'User'
     }
 }, {
+    collection: 'stockTransfers',
     timestamps: true
 });
 

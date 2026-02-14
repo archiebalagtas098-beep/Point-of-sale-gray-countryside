@@ -28,6 +28,9 @@ let lastUpdateTimes = {
     orders: null
 };
 
+// Real-time connection
+let adminEventSource = null;
+
 // Navigation routes mapping
 const NAVIGATION_ROUTES = {
     'dashboard': '/admindashboard',
@@ -39,9 +42,141 @@ const NAVIGATION_ROUTES = {
     'settings': '/admindashboard/settings'
 };
 
+// ==================== 🔴 DISABLE BACK BUTTON PREVENTION ====================
+function disableBackButtonPrevention() {
+    // Remove popstate event listeners that are preventing back button
+    window.removeEventListener('popstate', backButtonPreventionHandler);
+    
+    // Clear the preventBack state from history
+    try {
+        // Push a new state that allows navigation
+        window.history.pushState(null, '', window.location.href);
+    } catch (e) {
+        console.warn('Could not clear history state:', e);
+    }
+    
+    console.log('✅ Back button prevention disabled - back button now works');
+}
+
+// Store the handler reference so we can remove it later
+let backButtonPreventionHandler = null;
+
+// ==================== 🔴 INITIALIZE BACK BUTTON PREVENTION ====================
+function initializeBackButtonPrevention() {
+    // Only prevent back if user is logged in
+    if (localStorage.getItem('authToken')) {
+        // 🔴 AGGRESSIVE: Push multiple states to create buffer
+        for (let i = 0; i < 5; i++) {
+            window.history.pushState({ preventBack: true, level: i }, '', window.location.href);
+        }
+        
+        // Define the handler function and store it globally so we can remove it later
+        backButtonPreventionHandler = function(event) {
+            const currentState = window.history.state;
+            
+            // If user tries to go back, push them forward again
+            if (!currentState || currentState.preventBack === true) {
+                window.history.pushState({ preventBack: true }, '', window.location.href);
+                
+                // Show notification warning
+                if (typeof showNotification === 'function') {
+                    showNotification('Please use the logout button to exit', 'warning');
+                } else if (typeof alert !== 'undefined') {
+                    // Fallback to alert if showNotification doesn't exist
+                    // (don't actually use alert, but show in console)
+                    console.warn('⚠️ Please use the logout button to exit');
+                }
+            }
+        };
+        
+        // Handle popstate (back button)
+        window.addEventListener('popstate', backButtonPreventionHandler, false);
+        
+        console.log('🛡️ Back button prevention initialized with 5-level buffer');
+    }
+}
+
+// ==================== 🚪 LOGOUT HANDLER ====================
+async function handleLogout() {
+    try {
+        console.log('🚪 Logging out...');
+        
+        // Disable back button prevention first (new method)
+        if (typeof backButtonPrevention !== 'undefined') {
+            backButtonPrevention.disable();
+        } else {
+            disableBackButtonPrevention(); // Fallback to old method
+        }
+        
+        // Clear session
+        if (typeof sessionManager !== 'undefined') {
+            sessionManager.clearSession();
+        }
+        
+        // Close real-time connections
+        if (adminEventSource) {
+            adminEventSource.close();
+            adminEventSource = null;
+            console.log('✅ Real-time connection closed');
+        }
+        
+        if (window.dashboardEventSource) {
+            window.dashboardEventSource.close();
+            window.dashboardEventSource = null;
+            console.log('✅ Dashboard event source closed');
+        }
+        
+        // Clear all intervals
+        const intervals = window._adminIntervals || [];
+        intervals.forEach(clearInterval);
+        window._adminIntervals = [];
+        
+        // Clear all timeouts
+        const timeouts = window._adminTimeouts || [];
+        timeouts.forEach(clearTimeout);
+        window._adminTimeouts = [];
+        
+        // Clear all application state
+        dashboardData = {
+            stats: {},
+            inventory: [],
+            orders: [],
+            topSelling: [],
+            salesChart: []
+        };
+        lastUpdateTimes = {
+            sales: null,
+            inventory: null,
+            orders: null
+        };
+        
+        // Clear all localStorage items except auth token
+        const authToken = localStorage.getItem('authToken');
+        const refreshToken = localStorage.getItem('refreshToken');
+        localStorage.clear();
+        if (authToken) localStorage.setItem('authToken', authToken);
+        if (refreshToken) localStorage.setItem('refreshToken', refreshToken);
+        
+        // Small delay to ensure everything is cleaned up
+        setTimeout(() => {
+            // Redirect to logout endpoint
+            window.location.replace('/logout');
+            console.log('✅ Redirected to logout');
+        }, 100);
+        
+    } catch (error) {
+        console.error('❌ Logout error:', error);
+        // Even if there's an error, still redirect
+        window.location.replace('/login.html');
+    }
+}
+
 // Initialize Dashboard
 async function initializeDashboard() {
     try {
+        // 🛡️ CRITICAL: Prevent back button immediately on dashboard load
+        initializeBackButtonPrevention();
+        
         updateSectionTimestamps();
         await loadDashboardData();
         setupEventListeners();
@@ -732,6 +867,15 @@ function setupEventListeners() {
     if (viewAllLink) {
         viewAllLink.addEventListener('click', handleViewAllOrders);
     }
+    
+    // Attach logout handler to logout buttons
+    const logoutButtons = document.querySelectorAll('#logoutBtn, .logout-btn, [data-action="logout"], a[href*="logout"]');
+    logoutButtons.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            handleLogout();
+        });
+    });
 }
 
 // Setup sidebar navigation
@@ -866,9 +1010,9 @@ function handleViewAllOrders(event) {
 // Set up real-time updates
 function setupRealTimeUpdates() {
     try {
-        const eventSource = new EventSource('/api/admin/events');
+        adminEventSource = new EventSource('/api/admin/events');
         
-        eventSource.onmessage = (event) => {
+        adminEventSource.onmessage = (event) => {
             try {
                 const data = JSON.parse(event.data);
                 handleRealTimeEvent(data);
@@ -876,15 +1020,15 @@ function setupRealTimeUpdates() {
             }
         };
         
-        eventSource.onerror = (error) => {
-            eventSource.close();
+        adminEventSource.onerror = (error) => {
+            adminEventSource.close();
             
             setTimeout(() => {
                 setupRealTimeUpdates();
             }, 5000);
         };
         
-        window.dashboardEventSource = eventSource;
+        window.dashboardEventSource = adminEventSource;
         
     } catch (error) {
     }
@@ -953,7 +1097,7 @@ function handleStatsUpdate(statsData) {
 
 // Start periodic data refresh
 function startPeriodicRefresh() {
-    setInterval(async () => {
+    const intervalId = setInterval(async () => {
         try {
             await loadStats();
             await loadTodayOrders();
@@ -965,6 +1109,10 @@ function startPeriodicRefresh() {
         } catch (error) {
         }
     }, 2 * 60 * 1000);
+    
+    // Store interval for cleanup
+    if (!window._adminIntervals) window._adminIntervals = [];
+    window._adminIntervals.push(intervalId);
 }
 
 // Show new order notification
@@ -1056,12 +1204,19 @@ function formatTime(timeString) {
 
 // Cleanup function
 function cleanupDashboard() {
-    if (window.dashboardEventSource) {
-        window.dashboardEventSource.close();
+    if (adminEventSource) {
+        adminEventSource.close();
+        adminEventSource = null;
     }
     
-    if (window.dashboardIntervals) {
-        window.dashboardIntervals.forEach(interval => clearInterval(interval));
+    if (window.dashboardEventSource) {
+        window.dashboardEventSource.close();
+        window.dashboardEventSource = null;
+    }
+    
+    if (window._adminIntervals) {
+        window._adminIntervals.forEach(interval => clearInterval(interval));
+        window._adminIntervals = [];
     }
 }
 
@@ -1152,6 +1307,9 @@ function addAnimationStyles() {
 document.addEventListener('DOMContentLoaded', async () => {
     addAnimationStyles();
     
+    // Initialize back button prevention
+    initializeBackButtonPrevention();
+    
     const isDashboard = document.querySelector('.dashboard-container') !== null;
     const isSalesPage = window.location.pathname.includes('salesandreports');
     
@@ -1189,6 +1347,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // Always highlight current page
     highlightCurrentPage();
+    
+    // Attach logout handler to all logout buttons
+    const logoutButtons = document.querySelectorAll('#logoutBtn, .logout-btn, [data-action="logout"], a[href*="logout"]');
+    logoutButtons.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            handleLogout();
+        });
+    });
+    
+    console.log('✅ Admin Dashboard initialized with back button prevention');
 });
 
 // Cleanup on page unload
@@ -1200,6 +1369,10 @@ if (typeof module !== 'undefined' && module.exports) {
         initializeDashboard,
         loadDashboardData,
         updateDashboardUI,
-        cleanupDashboard
+        cleanupDashboard,
+        handleLogout
     };
 }
+
+// Make logout handler available globally
+window.handleLogout = handleLogout;

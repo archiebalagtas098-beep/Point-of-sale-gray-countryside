@@ -82,12 +82,14 @@ const salesDataSchema = new mongoose.Schema({
     default: Date.now
   }
 }, {
+  collection: 'salesData',
   timestamps: true
 });
 
 // Index for efficient queries
 salesDataSchema.index({ fullDate: 1 });
 salesDataSchema.index({ fullDate: -1 });
-salesDataSchema.compound = { fullDate: 1, dayOfWeek: 1 };
+salesDataSchema.index({ fullDate: 1, dayOfWeek: 1 });
 
 export const SalesData = mongoose.model("SalesData", salesDataSchema);
+export default SalesData;
